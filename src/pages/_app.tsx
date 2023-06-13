@@ -1,8 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { NextComponentType } from "next";
-import { AppContext, AppInitialProps, AppLayoutProps } from "next/app";
+import { type NextComponentType } from "next";
+import {
+  type AppContext,
+  type AppInitialProps,
+  type AppLayoutProps,
+} from "next/app";
 import Head from "next/head";
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import "~/styles/globals.css";
 
 const queryClient = new QueryClient({
