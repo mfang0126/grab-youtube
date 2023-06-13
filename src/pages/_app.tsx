@@ -30,7 +30,6 @@ const App: NextComponentType<AppContext, AppInitialProps, AppLayoutProps> = ({
         <meta name="description" content="Grab Your Youtube" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <Component {...pageProps} />
       {getLayout(<Component {...pageProps} />)}
     </QueryClientProvider>
   );

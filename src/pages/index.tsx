@@ -4,9 +4,9 @@ import ProgressBar from "~/components/ProgressBar";
 import useEventSource from "~/services/api-service";
 
 const Home: NextPage = () => {
-  const [youtubeUrl, setYoutubeUrl] = useState("https://youtu.be/aY1R0lH38bY");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [downloadPath, setDownloadPath] = useState("");
-  const { progress, filePath } = useEventSource(downloadPath);
+  const { progress, filePath, isLoading } = useEventSource(downloadPath);
 
   const handleSearchClick = () => {
     setDownloadPath(youtubeUrl);
@@ -24,7 +24,31 @@ const Home: NextPage = () => {
         <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
           Grab Your <span className="text-[hsl(280,100%,70%)]">Youtube</span>
         </h1>
+
+        {!isLoading && (
+          <div className="grid w-full grid-cols-1 gap-4">
+            <div className="flex items-center border-b-2 border-white py-2">
+              <input
+                className="mr-3 w-full appearance-none border-none bg-transparent px-2 py-1 leading-tight text-white focus:outline-none"
+                type="text"
+                placeholder="https://youtu.be/aY1R0lH38bY"
+                value={youtubeUrl}
+                aria-label="Youtube URL"
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+              />
+              <button
+                className="flex-shrink-0 rounded border-4 border-teal-500 bg-teal-500 px-2 py-1 text-sm text-white hover:border-teal-700 hover:bg-teal-700"
+                type="button"
+                onClick={handleSearchClick}
+              >
+                Grab
+              </button>
+            </div>
+          </div>
+        )}
+
         <ProgressBar percentage={progress} />
+
         {progress === 100 && (
           <a
             href={filePath}
@@ -34,26 +58,6 @@ const Home: NextPage = () => {
             {filePath}
           </a>
         )}
-
-        <div className="grid w-full grid-cols-1 gap-4">
-          <div className="flex items-center border-b-2 border-white py-2">
-            <input
-              className="mr-3 w-full appearance-none border-none bg-transparent px-2 py-1 leading-tight text-white focus:outline-none"
-              type="text"
-              value={youtubeUrl}
-              placeholder="https://youtu.be/aY1R0lH38bY"
-              aria-label="Youtube URL"
-              onChange={(e) => setYoutubeUrl(e.target.value)}
-            />
-            <button
-              className="flex-shrink-0 rounded border-4 border-teal-500 bg-teal-500 px-2 py-1 text-sm text-white hover:border-teal-700 hover:bg-teal-700"
-              type="button"
-              onClick={handleSearchClick}
-            >
-              Grab
-            </button>
-          </div>
-        </div>
       </div>
     </main>
   );

@@ -7,7 +7,7 @@ const ProgressBar: FC<ProgressBarProps> = ({ percentage }) => {
   const progress = Math.round(percentage);
 
   if (progress === 0 || progress === 100) {
-    return null;
+    return;
   }
 
   return (

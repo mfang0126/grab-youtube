@@ -1,9 +1,4 @@
-import axios from "axios";
 import { useEffect, useRef, useState } from "react";
-
-interface DownloadResponse {
-  client_id: string;
-}
 
 interface EventSourceMessage {
   progress?: number;
@@ -15,27 +10,19 @@ const useEventSource = (downloadUrl: string) => {
   const eventSource = useRef<EventSource | null>(null);
   const [progress, setProgress] = useState(0);
   const [filePath, setFielPath] = useState<string>();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!downloadUrl) {
       return;
     }
 
-    const getProgress = async () => {
+    const getProgress = () => {
       try {
-        // Fetch client_id from the server
-        const { data } = await axios.get<DownloadResponse>("/api/download", {
-          params: { url: downloadUrl },
-        });
-
-        if (!data.client_id) {
-          throw new Error("Invalid response from server.");
-        }
-        const client_id = data?.client_id;
-
+        setIsLoading(true);
         if (!eventSource.current) {
           eventSource.current = new EventSource(
-            `/api/events?client_id=${client_id}`
+            `/api/download?url=${downloadUrl}`
           );
         }
 
@@ -55,20 +42,21 @@ const useEventSource = (downloadUrl: string) => {
 
           if (data.status === "completed") {
             setFielPath(data.filePath);
+            setIsLoading(false);
             eventSource.current?.close();
           }
         };
       } catch (e) {
         // Log any errors
         console.error("Error in useEventSource:", e);
+        setIsLoading(false);
       }
     };
 
     void getProgress();
   }, [downloadUrl]);
 
-  console.log(eventSource.current, downloadUrl);
-  return { progress, filePath };
+  return { progress, filePath, isLoading };
 };
 
 export default useEventSource;
