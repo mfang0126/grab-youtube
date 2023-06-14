@@ -10,7 +10,8 @@ const HOST = "http://freedoming.asuscomm.com:81";
 /** @type {import("next").NextConfig} */
 const config = {
   reactStrictMode: true,
-
+  output: "standalone",
+  swcMinify: true,
   /**
    * If you have `experimental: { appDir: true }` set, then you must comment the below `i18n` config
    * out.
