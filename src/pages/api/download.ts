@@ -57,7 +57,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       );
     });
 
-    res.status(200).send(JSON.stringify({ progress, status }));
+    res.write(
+      `data: ${JSON.stringify({
+        progress,
+        status,
+      })}\n\n`
+    );
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

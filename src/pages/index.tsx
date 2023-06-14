@@ -15,6 +15,7 @@ const Home: NextPage = () => {
   useEffect(() => {
     if (progress === 100) {
       setYoutubeUrl("");
+      setDownloadPath("");
     }
   }, [progress]);
 
