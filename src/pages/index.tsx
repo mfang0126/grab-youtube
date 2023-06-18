@@ -1,12 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
 import { type NextPage } from "next";
 import { useEffect, useState } from "react";
 import ProgressBar from "~/components/ProgressBar";
-import useEventSource from "~/services/api-service";
+import useEventSource from "~/hooks/useEventSource";
+import { getFilePaths } from "~/services/api-service";
 
 const Home: NextPage = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [downloadPath, setDownloadPath] = useState("");
   const { progress, filePath, isLoading } = useEventSource(downloadPath);
+  const { data: files } = useQuery(["filePaths", filePath], getFilePaths);
 
   const handleSearchClick = () => {
     setDownloadPath(youtubeUrl);
@@ -48,17 +51,20 @@ const Home: NextPage = () => {
           </div>
         )}
 
-        <ProgressBar percentage={progress} />
+        {isLoading && <ProgressBar percentage={progress} />}
 
-        {progress === 100 && (
-          <a
-            href={filePath}
-            target="_blank"
-            className="rounded bg-blue-500 px-3 py-2 text-sm text-blue-100 no-underline hover:bg-blue-600 hover:text-blue-200 hover:underline"
-          >
-            {filePath}
-          </a>
-        )}
+        <div className="flex w-full flex-col justify-center gap-4">
+          {files?.map((file) => (
+            <a
+              key={file.name}
+              href={file.path}
+              target="_blank"
+              className="rounded bg-blue-500 px-3 py-2 text-sm text-blue-100 no-underline hover:bg-blue-600 hover:text-blue-200 hover:underline"
+            >
+              {file.name}
+            </a>
+          ))}
+        </div>
       </div>
     </main>
   );
