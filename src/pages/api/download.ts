@@ -1,7 +1,7 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
-import ytdl, { type videoInfo } from "ytdl-core";
 import fs from "fs";
+import { type NextApiRequest, type NextApiResponse } from "next";
 import path from "path";
+import ytdl from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
 import { Status } from "~/typing";
 import { isValidUrl, sanitizeFileName } from "~/utils/stringHelper";
@@ -19,12 +19,16 @@ const createOutputDirectory = () => {
   }
 };
 
-const streamVideo = async (
-  config: { videoInfo: videoInfo; url: string; format?: string },
-  sentData: (data: ProgressData) => void
+type SendData = (data: ProgressData, callback?: () => void) => void;
+
+const downloadAsOneFile = async (
+  url: string,
+  sentData: SendData,
+  format?: string
 ) => {
-  const { videoInfo, url, format } = config;
+  const videoInfo = await ytdl.getInfo(url);
   const { title } = videoInfo.videoDetails;
+
   const fileName = sanitizeFileName(title);
   const filePath = path.join(OUTPUT_PATH, fileName);
 
@@ -35,7 +39,10 @@ const streamVideo = async (
   createOutputDirectory();
   sentData({ progress: 0, status: Status.pending });
 
-  const video = ytdl(url, { quality: format || "highest" });
+  const video = ytdl(url, {
+    quality: format || "highest",
+    filter: "videoandaudio",
+  });
   const writeStream = fs.createWriteStream(filePath);
 
   video.pipe(writeStream);
@@ -51,12 +58,17 @@ const streamVideo = async (
       })
     );
     video.on("end", () =>
-      sentData({
-        progress: 100,
-        status: Status.completed,
-      })
+      sentData(
+        {
+          progress: 100,
+          status: Status.completed,
+        },
+        () => resolve()
+      )
     );
-    video.on("error", reject);
+    video.on("error", (error) =>
+      reject(new Error(`Video processing error: ${error.message}`))
+    );
   });
 };
 
@@ -65,6 +77,11 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const { url, format } = req.query;
+  const sentData: SendData = (data, callback) =>
+    res.write(
+      `data: ${JSON.stringify(data)}\n\n`,
+      () => callback && callback()
+    );
 
   try {
     if (typeof url !== "string" || (format && typeof format !== "string")) {
@@ -77,26 +94,17 @@ export default async function handler(
       Connection: "keep-alive",
     });
 
-    const sentData = (data: ProgressData) =>
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-
     res.setTimeout(MAX_TIMEOUT, () => {
-      sentData({
-        progress: 0,
-        status: Status.error,
-      });
-      res.end();
+      sentData(
+        {
+          progress: 0,
+          status: Status.error,
+        },
+        () => res.end()
+      );
     });
 
-    const videoInfo = await ytdl.getInfo(url);
-    await streamVideo(
-      {
-        videoInfo,
-        url,
-        format,
-      },
-      sentData
-    );
+    await downloadAsOneFile(url, sentData, format);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

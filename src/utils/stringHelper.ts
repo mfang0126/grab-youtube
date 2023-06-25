@@ -5,5 +5,5 @@ export const isValidUrl = (url: string) =>
 
 export const sanitizeFileName = (title: string) =>
   title
-    ? `${title.replaceAll(" ", "_").substring(0, 20)}.mp4`
+    ? `${title.replaceAll(" ", "_").substring(0, 30)}.mp4`
     : `${new Date().getTime()}.mp4`;

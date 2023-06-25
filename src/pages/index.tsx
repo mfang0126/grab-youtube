@@ -1,19 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { type NextPage } from "next";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import FormatsButtonGroup from "~/components/FormatsButtonGroup";
 import ProgressBar from "~/components/ProgressBar";
+import UrlInput from "~/components/UrlInput";
 import useEventSource from "~/hooks/useEventSource";
-import { getFilePaths } from "~/services/api-service";
+import { getFilePaths, getInfo } from "~/services/api-service";
 
 const Home: NextPage = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [downloadPath, setDownloadPath] = useState("");
-  const { progress, filePath, isLoading } = useEventSource(downloadPath);
-  const { data: files } = useQuery(["filePaths", filePath], getFilePaths);
 
-  const handleSearchClick = () => {
-    setDownloadPath(youtubeUrl);
-  };
+  const { progress, filePath, isLoading } = useEventSource(downloadPath);
+
+  const { data: files } = useQuery(["filePaths", filePath], getFilePaths);
+  const { data: info } = useQuery(["info", filePath], () =>
+    getInfo(youtubeUrl)
+  );
+
+  const options = useMemo(() => {
+    const formats = info?.videoOnlyFormats.map(
+      (format) => `${format.qualityLabel}-${format.itag}`
+    );
+    return formats ?? [];
+  }, [info?.videoOnlyFormats]);
 
   useEffect(() => {
     if (progress === 100) {
@@ -24,46 +34,39 @@ const Home: NextPage = () => {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
-      <div className="container flex max-w-max flex-col items-center justify-center gap-12 px-4 py-16">
+      <div className="container flex max-w-max flex-col justify-center gap-12 px-4 py-16">
         <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
           Grab Your <span className="text-[hsl(280,100%,70%)]">Youtube</span>
         </h1>
 
         {!isLoading && (
-          <div className="grid w-full grid-cols-1 gap-4">
-            <div className="flex items-center border-b-2 border-white py-2">
-              <input
-                className="mr-3 w-full appearance-none border-none bg-transparent px-2 py-1 leading-tight text-white focus:outline-none"
-                type="text"
-                placeholder="https://youtu.be/aY1R0lH38bY"
-                value={youtubeUrl}
-                aria-label="Youtube URL"
-                onChange={(e) => setYoutubeUrl(e.target.value)}
-              />
-              <button
-                className="flex-shrink-0 rounded border-4 border-teal-500 bg-teal-500 px-2 py-1 text-sm text-white hover:border-teal-700 hover:bg-teal-700"
-                type="button"
-                onClick={handleSearchClick}
-              >
-                Grab
-              </button>
-            </div>
-          </div>
+          <UrlInput
+            value={youtubeUrl}
+            onGrabButtonClick={() => setDownloadPath(youtubeUrl)}
+            onInputChange={(e) => setYoutubeUrl(e.target.value)}
+          />
         )}
+
+        <FormatsButtonGroup options={options} />
 
         {isLoading && <ProgressBar percentage={progress} />}
 
-        <div className="flex w-full flex-col justify-center gap-4">
-          {files?.map((file) => (
-            <a
-              key={file.name}
-              href={file.path}
-              target="_blank"
-              className="rounded bg-blue-500 px-3 py-2 text-sm text-blue-100 no-underline hover:bg-blue-600 hover:text-blue-200 hover:underline"
-            >
-              {file.name}
-            </a>
-          ))}
+        <div>
+          <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-white">
+            Click to Download
+          </h1>
+          <div className="flex flex-col justify-center gap-4">
+            {files?.map((file) => (
+              <a
+                key={file.name}
+                href={file.path}
+                target="_blank"
+                className="btn-primary btn rounded-md"
+              >
+                {file.name}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </main>

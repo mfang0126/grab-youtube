@@ -1,3 +1,5 @@
+import { type videoFormat } from "ytdl-core";
+
 export enum Status {
   downloading = "downloading",
   completed = "completed",
@@ -5,3 +7,15 @@ export enum Status {
   ready = "ready",
   error = "error",
 }
+
+export type Format = Pick<
+  videoFormat,
+  | "itag"
+  | "quality"
+  | "qualityLabel"
+  | "container"
+  | "contentLength"
+  | "hasAudio"
+  | "hasVideo"
+  | "mimeType"
+>;

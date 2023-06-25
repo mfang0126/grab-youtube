@@ -45,13 +45,10 @@ const useEventSource = (downloadUrl: string) => {
           if (data.status === "completed") {
             setFielPath(data.filePath);
             setIsLoading(false);
+            setProgress(0);
             eventSource.current?.close();
           }
         };
-
-        // eventSource.current.onerror = (event) => {
-        //   console.log(event);
-        // };
       } catch (e) {
         // Log any errors
         console.error("Error in useEventSource:", e);
