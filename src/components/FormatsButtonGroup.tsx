@@ -1,30 +1,52 @@
-import { type FC } from "react";
+import React, { type FC, type ChangeEvent } from "react";
+import { type Format } from "~/typing";
 
-interface FormatsButtonGroupProps {
-  options: string[];
+export interface FormatsButtonGroupProps {
+  options: Format[];
+  value: Format | null;
+  onChange: (value: Format) => void;
 }
 
-const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({ options }) => {
+const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({
+  options,
+  value,
+  onChange,
+}) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedOption = options.find(
+      (option) => `${option.itag}` === event.target.value
+    );
+    selectedOption && onChange(selectedOption);
+  };
+
   return (
-    <div>
+    <>
       <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-white">
         Select Formats
       </h1>
-      <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="mb-6 grid w-full grid-cols-2 gap-4 md:grid-cols-3">
         {options.map((option) => (
-          <div className="rounded-md bg-base-100 px-4" key={option}>
+          <div className="rounded-md bg-base-100 px-4" key={option.itag}>
             <label className="label cursor-pointer">
-              <span className="label-text">{option}</span>
+              <span className="label-text">
+                {option.qualityLabel || option.quality}
+              </span>
+              {option.hasAudio && option.hasVideo && (
+                <div className="badge badge-secondary">FAST</div>
+              )}
               <input
                 type="radio"
-                name="radio-10"
+                name="formats"
+                value={option.itag}
+                checked={value?.itag === option.itag}
+                onChange={handleChange}
                 className="radio checked:bg-red-500"
               />
             </label>
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 };
 

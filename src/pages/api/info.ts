@@ -32,7 +32,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<InfoResponse>
 ) {
-  const url = "https://youtu.be/aY1R0lH38bY";
+  const { url } = req.query;
 
   if (typeof url !== "string") {
     throw new Error("Required parameters are missing.");

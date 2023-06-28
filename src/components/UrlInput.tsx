@@ -2,19 +2,20 @@ import {
   type FC,
   type MouseEventHandler,
   type ChangeEventHandler,
-  useState,
 } from "react";
 
-export interface FormatsButtonGroupProps {
+export interface UrlInputProps {
   value: string;
+  isLoading?: boolean;
   onGrabButtonClick: MouseEventHandler<HTMLButtonElement>;
   onInputChange: ChangeEventHandler<HTMLInputElement>;
 }
 
-const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({
+const UrlInput: FC<UrlInputProps> = ({
   value,
   onGrabButtonClick,
   onInputChange,
+  isLoading,
 }) => {
   return (
     <div className="join">
@@ -30,11 +31,16 @@ const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({
         className="join-item btn rounded"
         type="button"
         onClick={onGrabButtonClick}
+        disabled={isLoading}
       >
-        Grab
+        {isLoading ? (
+          <span className="loading loading-infinity loading-lg"></span>
+        ) : (
+          "Grab"
+        )}
       </button>
     </div>
   );
 };
 
-export default FormatsButtonGroup;
+export default UrlInput;

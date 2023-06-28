@@ -1,4 +1,6 @@
 import ffmpeg from "fluent-ffmpeg";
+import { type Notifyer } from "~/pages/api/download";
+import { Status } from "~/typing";
 
 interface Progress {
   frames: number;
@@ -12,26 +14,26 @@ interface Progress {
 export const mergeAudioAndVideo = (
   videoInput: string,
   audioInput: string,
-  outputFile: string
+  outputFile: string,
+  notifyProgress: Notifyer
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     ffmpeg()
       .input(videoInput)
       .input(audioInput)
-      .outputOptions("-c:v copy") // copie the original video stream
-      .outputOptions("-c:a aac") // transcode the audio stream to aac
-      .outputOptions("-map 0:v") // tell ffmpeg to use the video from the first input
-      .outputOptions("-map 1:a") // tell ffmpeg to use the audio from the second input
       .output(outputFile)
+      .outputOptions(["-map 0:v", "-map 1:a", "-c:v libx264", "-c:a aac"])
       .on("end", resolve)
       .on("error", reject)
+      .on("start", (command) => {
+        console.log("FFMPEG COMMAND: ", command);
+      })
       .on("progress", (progress: Progress) => {
-        console.log(`Processing: ${progress.percent}% done`);
+        notifyProgress({
+          progress: progress.percent,
+          status: Status.merging,
+        });
       })
       .run();
   });
 };
-
-// mergeAudioAndVideo("input.mp4", "input.mp3", "output.mp4")
-//   .then(() => console.log("Finished processing"))
-//   .catch((err: Error) => console.log("An error occurred: " + err.message));
