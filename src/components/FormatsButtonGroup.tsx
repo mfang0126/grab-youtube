@@ -29,7 +29,7 @@ const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({
           <div className="rounded-md bg-base-100 px-4" key={option.itag}>
             <label className="label cursor-pointer">
               <span className="label-text">
-                {option.qualityLabel || option.quality}
+                {option.itag} - {option.qualityLabel || option.quality}
               </span>
               {option.hasAudio && option.hasVideo && (
                 <div className="badge badge-secondary">FAST</div>

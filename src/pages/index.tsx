@@ -1,18 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { type NextPage } from "next";
-import { type ChangeEventHandler, useEffect, useMemo, useState } from "react";
+import { type ChangeEventHandler, useEffect, useState } from "react";
 import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
 } from "~/components/FormatsButtonGroup";
 import ProgressBar from "~/components/ProgressBar";
 import UrlInput from "~/components/UrlInput";
 import useEventSource from "~/hooks/useEventSource";
-import { getFilePaths, getInfo } from "~/services/api-service";
+import {
+  getFilePaths,
+  getInfoFromYoutube,
+  sendJobToQueue,
+} from "~/services/api-service";
 import { Status, type Format } from "~/typing";
 
 const Home: NextPage = () => {
   const [url, setUrl] = useState("");
-  const [grabbedUrl, setGrabbedUrl] = useState("");
+  const [options, setOptions] = useState<Format[]>([]);
   const [downloadUrl, setDownloadUrl] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
@@ -26,28 +30,32 @@ const Home: NextPage = () => {
     getFilePaths
   );
 
-  const { data: urlInfo, isFetching: isGrabbing } = useQuery(
-    ["urlInfo", grabbedUrl],
-    () => getInfo(grabbedUrl),
-    {
-      enabled: !!grabbedUrl,
-    }
+  // Maybe useSwr is a good enough though...
+  const { isFetching: isGrabbing, refetch } = useQuery(
+    ["dataFromYoutube"],
+    () => getInfoFromYoutube(url),
+    { enabled: false }
   );
 
-  const options = useMemo(() => {
-    const { videoOnlyFormats, videoWithAudio, audioOnlyFormats } = urlInfo || {
-      videoOnlyFormats: [],
-      videoWithAudio: [],
-      audioOnlyFormats: [],
-    };
-    return [...videoOnlyFormats, ...videoWithAudio, ...audioOnlyFormats] ?? [];
-  }, [urlInfo]);
+  const handleGrabClick = () => {
+    setOptions([]);
+    void refetch().then(({ data }) => {
+      data && setOptions(data.formats);
+    });
+  };
 
-  const handleGrabClick = () => setGrabbedUrl(url);
   const handleUrlChange: ChangeEventHandler<HTMLInputElement> = (e) =>
     setUrl(e.target.value);
   const handleFormatChange: FormatsButtonGroupProps["onChange"] = (option) =>
     setSelectedFormat(option);
+  const handleDownloadBtnClick = () => {
+    if (selectedFormat?.itag) {
+      void sendJobToQueue({
+        url,
+        format: `${selectedFormat.itag}`,
+      });
+    }
+  };
 
   useEffect(() => {
     if (Status.completed === status) {
@@ -55,6 +63,10 @@ const Home: NextPage = () => {
       void refetchFiles();
     }
   }, [progress, refetchFiles, status]);
+
+  useEffect(() => {
+    setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
+  }, []);
 
   if (isLoading) {
     return (
@@ -85,7 +97,7 @@ const Home: NextPage = () => {
           />
         )}
 
-        {!!options?.length && (
+        {!!options.length && (
           <div>
             <FormatsButtonGroup
               options={options}
@@ -95,7 +107,7 @@ const Home: NextPage = () => {
             {selectedFormat && (
               <button
                 className="btn-accent btn w-full"
-                onClick={() => setDownloadUrl(url)}
+                onClick={handleDownloadBtnClick}
               >
                 Download
               </button>
