@@ -1,7 +1,8 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
-import { type MoreVideoDetails } from "ytdl-core";
+import type { Format } from "fluent-ffmpeg";
+import type { NextApiRequest, NextApiResponse } from "next";
+import type { MoreVideoDetails } from "ytdl-core";
 import { requestInfoFromYoutube } from "~/services/youtube-services";
-import { type ErrorResponse, type Format } from "~/typing";
+import type { ErrorResponse } from "~/typing";
 
 export interface InfoResponse {
   videoDetails: MoreVideoDetails;

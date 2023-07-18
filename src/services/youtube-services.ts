@@ -1,10 +1,5 @@
-import ytdl, { type MoreVideoDetails, type videoFormat } from "ytdl-core";
+import ytdl, { type videoFormat } from "ytdl-core";
 import { FormatType, type Format } from "~/typing";
-
-export interface InfoResponse {
-  videoDetails: MoreVideoDetails;
-  formats: Format[];
-}
 
 export const requestInfoFromYoutube = async (url: string) => {
   if (typeof url !== "string") {
@@ -13,12 +8,16 @@ export const requestInfoFromYoutube = async (url: string) => {
 
   try {
     const { videoDetails, formats } = await ytdl.getInfo(url);
+    const { videoId } = videoDetails;
 
     const filteredFormats = filterFormats(formats);
-    return { videoDetails, formats: filteredFormats };
+    return {
+      videoId,
+      videoDetails,
+      formats: filteredFormats,
+    };
   } catch (error) {
-    console.error(error);
-    return { msg: "Error on requesting video info from YouTube" };
+    console.error(`Error on requesting video info from YouTube: `, error);
   }
 };
 

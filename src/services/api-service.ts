@@ -1,6 +1,5 @@
 import axios from "axios";
-import { type InfoResponse } from "~/pages/api/integration/youtube";
-import { type JobData } from "~/typing";
+import type { JobData, YoutubeDetials } from "~/typing";
 
 interface FilePath {
   name: string;
@@ -10,9 +9,9 @@ interface FilePath {
 export const getFilePaths = () =>
   axios.get<FilePath[]>("/api/files-path").then((res) => res.data);
 
-export const getInfoFromYoutube = (url: string) =>
+export const getJobInfo = (url: string, videoId?: string) =>
   axios
-    .get<InfoResponse>("/api/integration/youtube", { params: { url } })
+    .post<YoutubeDetials>("/api/jobs", { url, videoId })
     .then((res) => res.data);
 
 export const sendJobToQueue = (data: JobData) =>

@@ -1,62 +1,53 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
+import { Collections } from "~/entities";
 import { getDb, getSession } from "~/services/mongodb";
-import { Collections, type YoutubeJob } from "~/entities";
 import { requestInfoFromYoutube } from "~/services/youtube-services";
+import type { YoutubeDetials } from "~/typing";
+import { getYouTubeVideoId } from "~/utils/stringHelper";
 
 interface JobPayload {
-  videoId?: string;
-  url?: string;
-  format?: string;
+  url: string;
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { videoId, url, format } = req.body as JobPayload;
+  const { url } = req.body as JobPayload;
+  const videoId = getYouTubeVideoId(url);
+  const db = await getDb();
 
   if (videoId) {
-    const job = await getInfoByVideoId(videoId);
-    res.json(job);
-  }
+    console.log(`Found videoId: ${videoId}`);
+    // Get job data by videoId
+    const job = await db
+      .collection<YoutubeDetials>(Collections.YoutubeJob)
+      .findOne({ videoId });
 
-  if (url) {
+    if (job?._id) {
+      console.log(`Found info with videoId: ${videoId}`);
+      return res.json(job);
+    }
+  } else if (url) {
+    // Request job data from youtube
     const grabbedInfo = await requestInfoFromYoutube(url);
 
-    res.json(grabbedInfo);
+    if (!grabbedInfo) {
+      throw { code: 400 };
+    }
+
+    const result = await db
+      .collection<YoutubeDetials>(Collections.YoutubeJob)
+      .findOneAndUpdate(
+        { videoId: grabbedInfo.videoId },
+        { $set: grabbedInfo }
+      );
+
+    if (result.ok) {
+      console.log(`Pull info from youtube`);
+      return res.json(grabbedInfo);
+    }
   }
-}
 
-async function getInfoByVideoId(videoId: string) {
-  const db = await getDb();
-  const job = await db
-    .collection<YoutubeJob>(Collections.YoutubeJob)
-    .findOne({ videoId });
-
-  if (!job) {
-    throw { code: 400 };
-  }
-
-  return job;
-}
-
-// TODO:
-async function saveJobInfo(videoId: string) {
-  //   const db = await getDb();
-  //   const session = getSession();
-  //   return session
-  //     .withTransaction(async () => {
-  //       const { value } = await db
-  //         .collection<YoutubeJob>(Collections.YoutubeJob)
-  //         .findOneAndUpdate(
-  //           { type: SequenceType.Order, year },
-  //           { $inc: { lastSeq: 1 } },
-  //           { upsert: true, session, returnDocument: "after" }
-  //         );
-  //     })
-  //     .catch((e) => {
-  //       console.error("Error on requesting from Youtube.:", e);
-  //       return res.status(400).json({ msg: "Error on requesting from Youtube." });
-  //     });
-  //   return job;
+  throw { code: 400 };
 }

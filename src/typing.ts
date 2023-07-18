@@ -1,4 +1,5 @@
-import { type videoFormat } from "ytdl-core";
+import type { ObjectId } from "mongodb";
+import { MoreVideoDetails, type videoFormat } from "ytdl-core";
 
 export enum FormatType {
   audioOnly = "audioOnly",
@@ -22,6 +23,13 @@ export enum Status {
   pending = "pending",
   ready = "ready",
   error = "error",
+}
+
+export interface YoutubeDetials {
+  _id: ObjectId;
+  videoId: string;
+  videoDetails: MoreVideoDetails;
+  formats: Format[];
 }
 
 export type Format = Pick<

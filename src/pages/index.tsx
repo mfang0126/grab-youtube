@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type NextPage } from "next";
+import type { NextPage } from "next";
 import { type ChangeEventHandler, useEffect, useState } from "react";
 import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
@@ -9,7 +9,7 @@ import UrlInput from "~/components/UrlInput";
 import useEventSource from "~/hooks/useEventSource";
 import {
   getFilePaths,
-  getInfoFromYoutube,
+  getJobInfo,
   sendJobToQueue,
 } from "~/services/api-service";
 import { Status, type Format } from "~/typing";
@@ -33,7 +33,7 @@ const Home: NextPage = () => {
   // Maybe useSwr is a good enough though...
   const { isFetching: isGrabbing, refetch } = useQuery(
     ["dataFromYoutube"],
-    () => getInfoFromYoutube(url),
+    () => getJobInfo(url),
     { enabled: false }
   );
 

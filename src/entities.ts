@@ -1,5 +1,5 @@
-import { type videoFormat } from "ytdl-core";
-import { type FormatType } from "./typing";
+import type { videoFormat } from "ytdl-core";
+import type { FormatType } from "./typing";
 
 export enum Collections {
   YoutubeJob = "youtube-jobs",

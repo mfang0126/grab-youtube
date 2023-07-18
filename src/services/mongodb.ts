@@ -1,25 +1,25 @@
 import { type ClientSession, type Db, MongoClient } from "mongodb";
 
-const { MONGO_URI, MONGO_DATABASE } = process.env;
+const { MONGODB_URI, MONGODB_DATABASE } = process.env;
 
 declare let global: NodeJS.Global;
 
 const initDb = async (): Promise<Db> => {
   try {
-    if (!MONGO_URI) {
-      throw Error("MONGO_URI is required.");
+    if (!MONGODB_URI) {
+      throw Error("MONGODB_URI is required.");
     }
 
-    console.log("DB is connecting.", MONGO_URI);
-    global.client = await MongoClient.connect(MONGO_URI, {
+    console.log("DB is connecting.", MONGODB_URI);
+    global.client = await MongoClient.connect(MONGODB_URI, {
       maxIdleTimeMS: 10000,
       serverSelectionTimeoutMS: 5000,
       minPoolSize: 0,
       socketTimeoutMS: 5000,
     });
 
-    console.log("DB connected.", MONGO_URI);
-    global.db = global.client.db(MONGO_DATABASE);
+    console.log("DB connected.", MONGODB_URI);
+    global.db = global.client.db(MONGODB_DATABASE);
     return global.db;
   } catch (err) {
     console.log("Failed to connect to MongoDB");
