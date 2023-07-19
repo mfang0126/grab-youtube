@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Collections } from "~/entities";
-import { getDb, getSession } from "~/services/mongodb";
+import { getDb } from "~/services/mongodb";
 import { requestInfoFromYoutube } from "~/services/youtube-services";
 import type { YoutubeDetials } from "~/typing";
 import { getYouTubeVideoId } from "~/utils/stringHelper";
@@ -18,17 +18,19 @@ export default async function handler(
   const db = await getDb();
 
   if (videoId) {
-    console.log(`Found videoId: ${videoId}`);
+    console.log(`${videoId} - Found videoId`);
     // Get job data by videoId
     const job = await db
       .collection<YoutubeDetials>(Collections.YoutubeJob)
       .findOne({ videoId });
 
     if (job?._id) {
-      console.log(`Found info with videoId: ${videoId}`);
+      console.log(`${videoId} - Found video data.`);
       return res.json(job);
     }
-  } else if (url) {
+  }
+
+  if (url) {
     // Request job data from youtube
     const grabbedInfo = await requestInfoFromYoutube(url);
 
@@ -36,16 +38,16 @@ export default async function handler(
       throw { code: 400 };
     }
 
-    const result = await db
+    const { value } = await db
       .collection<YoutubeDetials>(Collections.YoutubeJob)
       .findOneAndUpdate(
         { videoId: grabbedInfo.videoId },
         { $set: grabbedInfo }
       );
 
-    if (result.ok) {
-      console.log(`Pull info from youtube`);
-      return res.json(grabbedInfo);
+    if (value?._id) {
+      console.log(`${videoId} - Pull info from youtube`);
+      return res.json({ ...grabbedInfo, _id: value?._id });
     }
   }
 

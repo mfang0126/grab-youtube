@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import { MoreVideoDetails, type videoFormat } from "ytdl-core";
+import type { MoreVideoDetails, videoFormat } from "ytdl-core";
 
 export enum FormatType {
   audioOnly = "audioOnly",
@@ -11,8 +11,8 @@ export interface ErrorResponse {
   msg: string;
 }
 
-export interface JobData {
-  url: string;
+export interface JobPayload {
+  videoId: string;
   format: string;
 }
 

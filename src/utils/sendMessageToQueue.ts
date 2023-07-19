@@ -1,12 +1,17 @@
 import { connect } from "amqplib";
-import { RABBITMQ_URL } from "~/config";
-import { type JobData } from "~/typing";
+import { type JobPayload } from "~/typing";
+
+const { RABBITMQ_URL } = process.env;
 
 export const sendMessageToQueue = async (
   queueName: string,
-  message: JobData
+  message: JobPayload
 ) => {
   try {
+    if (!RABBITMQ_URL) {
+      throw Error("RABBITMQ_URL is required!");
+    }
+
     // Connect to RabbitMQ
     const connection = await connect(RABBITMQ_URL);
     console.log(connection);

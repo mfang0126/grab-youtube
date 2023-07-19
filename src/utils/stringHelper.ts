@@ -1,5 +1,7 @@
 const YOUTUBE_REGEX =
   /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
+const VIDEO_ID_REGEX = /\/watch\?v=([a-zA-Z0-9-_]+)/;
+const VIDEO_ID_VALIDATION_REGEX = /^[A-Za-z0-9_-]{11}$/;
 
 export const isValidUrl = (url: string) => YOUTUBE_REGEX.test(url);
 
@@ -15,13 +17,19 @@ export const sanitizeFileName = (title: string, quality?: string) => {
   };
 };
 
+// https://youtu.be/iHE8dh_fggs
+// https://www.youtube.com/watch?v=iHE8dh_fggs
+// https://www.youtube.com/embed/iHE8dh_fggs
 export const getYouTubeVideoId = (url: string): string => {
-  // each time
-  // RegExp#exec() stores and depends on a property named .lastIndex inside the RegExp object to prevent re-matching. Don't use it; remove the g flag and use String#match(), or, if you need to match multiple times against the same string, String#matchAll().
-  const match = YOUTUBE_REGEX.exec(url);
-  if (match && match[1]) {
-    return match[1];
-  } else {
+  if (!url.match(VIDEO_ID_REGEX)) {
     return "";
   }
+
+  const match = url.match(VIDEO_ID_REGEX);
+  const videoId = match?.[1];
+  if (videoId && !videoId.match(VIDEO_ID_VALIDATION_REGEX)) {
+    return "";
+  }
+
+  return videoId ?? "";
 };

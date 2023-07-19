@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { ObjectId } from "mongodb";
 import type { NextPage } from "next";
-import { type ChangeEventHandler, useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEventHandler } from "react";
 import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
 } from "~/components/FormatsButtonGroup";
 import ProgressBar from "~/components/ProgressBar";
+import Toast from "~/components/Toast";
 import UrlInput from "~/components/UrlInput";
 import useEventSource from "~/hooks/useEventSource";
 import {
@@ -16,7 +18,10 @@ import { Status, type Format } from "~/typing";
 
 const Home: NextPage = () => {
   const [url, setUrl] = useState("");
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState("");
   const [options, setOptions] = useState<Format[]>([]);
+  const [videoId, setVideoId] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
@@ -40,7 +45,10 @@ const Home: NextPage = () => {
   const handleGrabClick = () => {
     setOptions([]);
     void refetch().then(({ data }) => {
-      data && setOptions(data.formats);
+      if (data) {
+        setOptions(data.formats);
+        setVideoId(data.videoId);
+      }
     });
   };
 
@@ -49,10 +57,10 @@ const Home: NextPage = () => {
   const handleFormatChange: FormatsButtonGroupProps["onChange"] = (option) =>
     setSelectedFormat(option);
   const handleDownloadBtnClick = () => {
-    if (selectedFormat?.itag) {
-      void sendJobToQueue({
-        url,
-        format: `${selectedFormat.itag}`,
+    if (selectedFormat?.itag && videoId) {
+      void sendJobToQueue(videoId, `${selectedFormat.itag}`).then(() => {
+        setOpen(true);
+        setMsg("Your job is in the line now.");
       });
     }
   };
@@ -135,6 +143,7 @@ const Home: NextPage = () => {
           </div>
         )}
       </div>
+      <Toast message={msg} open={open} onClose={() => setOpen(false)} />
     </main>
   );
 };
