@@ -21,7 +21,7 @@ const Home: NextPage = () => {
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState("");
   const [options, setOptions] = useState<Format[]>([]);
-  const [videoId, setVideoId] = useState("");
+  const [jobId, setJobId] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
@@ -47,7 +47,7 @@ const Home: NextPage = () => {
     void refetch().then(({ data }) => {
       if (data) {
         setOptions(data.formats);
-        setVideoId(data.videoId);
+        setJobId(data._id.toString());
       }
     });
   };
@@ -57,8 +57,8 @@ const Home: NextPage = () => {
   const handleFormatChange: FormatsButtonGroupProps["onChange"] = (option) =>
     setSelectedFormat(option);
   const handleDownloadBtnClick = () => {
-    if (selectedFormat?.itag && videoId) {
-      void sendJobToQueue(videoId, `${selectedFormat.itag}`).then(() => {
+    if (selectedFormat?.itag && jobId) {
+      void sendJobToQueue(jobId, `${selectedFormat.itag}`).then(() => {
         setOpen(true);
         setMsg("Your job is in the line now.");
       });

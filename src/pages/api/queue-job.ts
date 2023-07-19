@@ -6,19 +6,19 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { videoId, format } = req.body as JobPayload;
+  const { jobId, format } = req.body as JobPayload;
 
-  if (typeof videoId !== "string" || typeof format !== "string") {
+  if (typeof jobId !== "string" || typeof format !== "string") {
     return res.status(400).json({ error: "Required parameters are missing." });
   }
 
   try {
     await sendMessageToQueue("youtube", {
-      videoId,
+      jobId,
       format,
     });
 
-    console.log(`${videoId}-${format} - Download job sent.`);
+    console.log(`${jobId}-${format} - Download job sent.`);
     res.status(200).json("Download job sent.");
   } catch (error) {
     console.error("Error processing job request:", error);

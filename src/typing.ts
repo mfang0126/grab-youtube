@@ -12,7 +12,7 @@ export interface ErrorResponse {
 }
 
 export interface JobPayload {
-  videoId: string;
+  jobId: string;
   format: string;
 }
 
