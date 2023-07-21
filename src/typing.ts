@@ -29,6 +29,7 @@ export interface YoutubeDetails {
 
 export interface ProgressJob {
   _id: ObjectId;
+  videoId: ObjectId;
   progress?: number;
   formatItag?: number;
   status?: Status;

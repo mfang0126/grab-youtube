@@ -14,7 +14,7 @@ export const getJobInfo = (url: string, videoId?: string) =>
     .post<YoutubeDetails>("/api/jobs", { url, videoId })
     .then((res) => res.data);
 
-export const sendJobToQueue = (jobId: string, format: string) =>
+export const sendJobToQueue = (id: string, format: string) =>
   axios
-    .post<FilePath[]>("/api/queue-job", { jobId, format })
+    .post<FilePath[]>("/api/jobs/queue", { id, format })
     .then((res) => res.data);

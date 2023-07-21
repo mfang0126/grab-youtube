@@ -17,28 +17,17 @@ interface ProgressData {
 
 type Notifyer = (data: ProgressData) => Promise<void>;
 
-let queueResponse: NextApiResponse | undefined;
-
-export const initQueueResponse = (res: NextApiResponse) => {
-  queueResponse = res;
-};
-
-export const getQueueResponse = () => {
-  if (!queueResponse) {
-    throw Error("Queue response need to be initialized first.");
-  }
-  return queueResponse;
-};
-
-export const closeQueueResponse = () => {
-  queueResponse = undefined;
-};
+let presentProgress: number;
 
 export const notifyProgress: Notifyer = (data) => {
-  const queueResponse = getQueueResponse();
-  return new Promise<void>((resolve) => {
-    queueResponse.write(`data: ${JSON.stringify(data)}\n\n`, () => resolve());
-  });
+  const newProgress = Math.round(data.progress);
+
+  if (newProgress > presentProgress) {
+    presentProgress = newProgress;
+    console.log({ progress: newProgress, status: data.status });
+  }
+
+  return Promise.resolve();
 };
 
 const createOutputDirectory = () => {
@@ -90,7 +79,9 @@ export const generateVideo = async (
   if (!formatMatched) {
     throw new Error("No valid format video to download.");
   }
-  console.log("MATCHED VIDEO FORMAT: ", formatMatched);
+
+  const { itag, qualityLabel } = formatMatched;
+  console.log(`MATCHED VIDEO FORMAT: ${itag} - ${qualityLabel}`);
 
   const { audioName, videoName, outputName } = sanitizeFileName(
     title,

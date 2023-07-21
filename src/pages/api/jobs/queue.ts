@@ -22,38 +22,47 @@ interface QueueJobPayload {
 interface UpdateJobPayload {
   id: string;
   status: string;
+  progress: number;
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Add a new job to the queue
   if (req.method === "POST") {
     initQueueResponse(res);
     const { id, format } = req.body as QueueJobPayload;
 
-    if (!id || (format && id)) {
+    if (!id || (format && !id)) {
       throw new Error("Required parameters are missing.");
     }
 
     const db = await getDb();
-    const { value } = await db
+    const result = await db
       .collection<ProgressJob>(Collections.Jobs)
-      .findOneAndUpdate(
-        { id: new ObjectId(id) },
-        { $set: { progress: 0, status: Status.ready } }
-      );
+      .insertOne({
+        progress: 0,
+        status: Status.ready,
+        _id: new ObjectId(),
+        updatedAt: new Date(),
+        createAt: new Date(),
+        formatItag: Number(format) ?? undefined,
+        videoId: new ObjectId(id),
+      });
 
-    if (!value?._id) {
+    if (!result.insertedId) {
       throw new Error(`${id} - Cannot find the job data.`);
     }
 
     closeQueueResponse();
-    res.json(value);
+    res.json({ id, format });
   }
 
+  // Update status to a job in the queue
+  // As default, it marks the job as 100% + completed
   if (req.method === "PUT") {
-    const { id, status } = req.body as UpdateJobPayload;
+    const { id, status, progress } = req.body as UpdateJobPayload;
 
     if (!id || !isStatus(status)) {
       throw new Error("Required parameters are missing.");
@@ -64,7 +73,12 @@ export default async function handler(
       .collection<ProgressJob>(Collections.Jobs)
       .findOneAndUpdate(
         { id: new ObjectId(id) },
-        { $set: { progress: 100, status: status as Status } }
+        {
+          $set: {
+            progress: progress ?? 100,
+            status: (status as Status) ?? Status.completed,
+          },
+        }
       );
 
     if (!value?._id) {
