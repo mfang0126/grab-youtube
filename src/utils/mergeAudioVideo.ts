@@ -1,5 +1,4 @@
 import ffmpeg from "fluent-ffmpeg";
-import { type Notifyer } from "~/pages/api/download";
 import { Status } from "~/typing";
 
 interface Progress {
@@ -10,6 +9,13 @@ interface Progress {
   timemark: string;
   percent: number;
 }
+
+// TODO: fix the type
+interface ProgressData {
+  progress: number;
+  status: Status;
+}
+type Notifyer = (data: ProgressData) => void;
 
 export const mergeAudioAndVideo = (
   videoInput: string,
@@ -29,7 +35,7 @@ export const mergeAudioAndVideo = (
         console.log("FFMPEG COMMAND: ", command);
       })
       .on("progress", (progress: Progress) => {
-        notifyProgress({
+        void notifyProgress({
           progress: progress.percent,
           status: Status.merging,
         });

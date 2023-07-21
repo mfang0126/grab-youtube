@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { JobPayload, YoutubeDetials } from "~/typing";
+import type { YoutubeDetails } from "~/typing";
 
 interface FilePath {
   name: string;
@@ -11,10 +11,10 @@ export const getFilePaths = () =>
 
 export const getJobInfo = (url: string, videoId?: string) =>
   axios
-    .post<YoutubeDetials>("/api/jobs", { url, videoId })
+    .post<YoutubeDetails>("/api/jobs", { url, videoId })
     .then((res) => res.data);
 
-export const sendJobToQueue = (id: string, format: string) =>
+export const sendJobToQueue = (jobId: string, format: string) =>
   axios
-    .post<FilePath[]>("/api/queue-job", { id, format })
+    .post<FilePath[]>("/api/queue-job", { jobId, format })
     .then((res) => res.data);

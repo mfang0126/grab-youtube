@@ -11,11 +11,6 @@ export interface ErrorResponse {
   msg: string;
 }
 
-export interface JobPayload {
-  jobId: string;
-  format: string;
-}
-
 export enum Status {
   downloading = "downloading",
   merging = "merging",
@@ -25,11 +20,20 @@ export enum Status {
   error = "error",
 }
 
-export interface YoutubeDetials {
+export interface YoutubeDetails {
   _id: ObjectId;
   videoId: string;
   videoDetails: MoreVideoDetails;
   formats: Format[];
+}
+
+export interface ProgressJob {
+  _id: ObjectId;
+  progress?: number;
+  formatItag?: number;
+  status?: Status;
+  updatedAt?: Date;
+  createAt?: Date;
 }
 
 export type Format = Pick<

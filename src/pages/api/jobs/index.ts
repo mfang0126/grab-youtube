@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
 import { requestInfoFromYoutube } from "~/services/youtube-services";
-import type { YoutubeDetials } from "~/typing";
+import type { YoutubeDetails } from "~/typing";
 import { getYouTubeVideoId } from "~/utils/stringHelper";
 
 interface JobPayload {
@@ -21,7 +21,7 @@ export default async function handler(
     console.log(`${videoId} - Found videoId`);
     // Get job data by videoId
     const job = await db
-      .collection<YoutubeDetials>(Collections.YoutubeJob)
+      .collection<YoutubeDetails>(Collections.Videos)
       .findOne({ videoId });
 
     if (job?._id) {
@@ -39,7 +39,7 @@ export default async function handler(
     }
 
     const { value } = await db
-      .collection<YoutubeDetials>(Collections.YoutubeJob)
+      .collection<YoutubeDetails>(Collections.Videos)
       .findOneAndUpdate(
         { videoId: grabbedInfo.videoId },
         { $set: grabbedInfo }
