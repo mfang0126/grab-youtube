@@ -2,7 +2,7 @@ import { type NextApiRequest, type NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
 import { generateVideo } from "~/services/youtube-services";
-import { Status, type ProgressJob, type YoutubeDetails } from "~/typing";
+import { Status, type ProgressJob, type Video } from "~/typing";
 
 export default async function handler(
   req: NextApiRequest,
@@ -22,7 +22,7 @@ export default async function handler(
   }
 
   const video = await db
-    .collection<YoutubeDetails>(Collections.Videos)
+    .collection<Video>(Collections.Videos)
     .findOne({ _id: job.videoId });
 
   if (!video?._id) {

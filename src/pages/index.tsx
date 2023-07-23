@@ -1,20 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+"use client";
+
 import type { NextPage } from "next";
 import { useEffect, useState, type ChangeEventHandler } from "react";
+import useSWR from "swr";
+import DownloadFiles from "~/components/DownloadFilesList";
 import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
 } from "~/components/FormatsButtonGroup";
 import Heading from "~/components/Heading";
-import ProcessingArea from "~/components/ProcessingArea";
+import JobsList from "~/components/JobsList";
 import Title from "~/components/Title";
 import Toast from "~/components/Toast";
 import UrlInput from "~/components/UrlInput";
 import Wrapper from "~/components/Wrapper";
 import {
-  getAllJobsInQueue,
+  getJobsFromQueue,
   getFilePaths,
-  getJobInfo,
   sendJobToQueue,
+  getVideos,
 } from "~/services/api-service";
 import { type Format } from "~/typing";
 
@@ -26,26 +29,18 @@ const Home: NextPage = () => {
   const [jobId, setJobId] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
-  const { data: files } = useQuery(["filePaths"], getFilePaths, {
-    initialData: [],
+  const { data: files } = useSWR("files", getFilePaths);
+  const { data: jobs } = useSWR("jobs", getJobsFromQueue);
+  const { isLoading: isGrabbing, mutate } = useSWR("videos", async () => {
+    if (url) {
+      const videos = await getVideos(url);
+      return videos;
+    }
   });
-
-  const { data: processingJobs } = useQuery(
-    ["processingJobs"],
-    getAllJobsInQueue,
-    { initialData: [] }
-  );
-  // console.log(processingJobs, files);
-
-  const { isFetching: isGrabbing, refetch } = useQuery(
-    ["dataFromYoutube"],
-    () => getJobInfo(url),
-    { enabled: false }
-  );
 
   const handleGrabClick = () => {
     setOptions([]);
-    void refetch().then(({ data }) => {
+    void mutate().then((data) => {
       if (data) {
         setOptions(data.formats);
         setJobId(data._id.toString());
@@ -101,27 +96,8 @@ const Home: NextPage = () => {
           )}
         </div>
       )}
-
-      {!!files.length && (
-        <div>
-          <Heading>Click to Download</Heading>
-          <div className="flex flex-col justify-center gap-4">
-            {files?.map((file) => (
-              <a
-                key={file.name}
-                href={file.path}
-                target="_blank"
-                className="btn-info btn-outline btn"
-              >
-                {file.name}
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!!processingJobs.length && <ProcessingArea jobs={processingJobs} />}
-
+      <DownloadFiles files={files ?? []} />
+      <JobsList jobs={jobs ?? []} />
       <Toast message={msg} open={open} onClose={() => setOpen(false)} />
     </Wrapper>
   );

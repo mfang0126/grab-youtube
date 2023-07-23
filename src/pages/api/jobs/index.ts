@@ -1,12 +1,17 @@
+import type { ObjectId } from "mongodb";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
 import { requestInfoFromYoutube } from "~/services/youtube-services";
-import type { YoutubeDetails } from "~/typing";
+import type { VideoItem } from "~/typing";
 import { getYouTubeVideoId } from "~/utils/stringHelper";
 
 interface JobPayload {
   url: string;
+}
+
+interface Video extends Omit<VideoItem, "_id"> {
+  _id: ObjectId;
 }
 
 export default async function handler(
@@ -20,7 +25,7 @@ export default async function handler(
   if (videoId) {
     // Get job data by videoId
     const job = await db
-      .collection<YoutubeDetails>(Collections.Videos)
+      .collection<Video>(Collections.Videos)
       .findOne({ videoId });
 
     if (job?._id) {
@@ -40,7 +45,7 @@ export default async function handler(
     }
 
     const { value } = await db
-      .collection<YoutubeDetails>(Collections.Videos)
+      .collection<Video>(Collections.Videos)
       .findOneAndUpdate(
         { videoId: grabbedInfo.videoId },
         { $set: grabbedInfo }

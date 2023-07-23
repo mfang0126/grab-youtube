@@ -1,10 +1,9 @@
 import fs from "fs";
-import type { NextApiResponse } from "next";
 import path from "path";
 import type { Readable } from "stream";
 import ytdl, { type videoFormat } from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
-import { FormatType, Status, type Format, type YoutubeDetails } from "~/typing";
+import { FormatType, Status, type Format, type Video } from "~/typing";
 import { mergeAudioAndVideo } from "~/utils/mergeAudioVideo";
 import { removeFilesWithExtensions } from "~/utils/removeFilesWithExtensions";
 import { sanitizeFileName } from "~/utils/stringHelper";
@@ -56,12 +55,12 @@ const downloadFile = (stream: Readable, fileName: string) =>
     );
     stream.on("end", () => resolve(filePath));
     stream.on("error", (error) =>
-      reject(new Error(`Video processing error: ${error.message}`))
+      reject(new Error(`VideoItem processing error: ${error.message}`))
     );
   });
 
 export const generateVideo = async (
-  selectedFormat: YoutubeDetails,
+  selectedFormat: Video,
   formatItag?: number
 ) => {
   const { videoDetails, formats } = selectedFormat;
@@ -170,7 +169,7 @@ export const generateVideo = async (
           }).then(() => resolve())
       )
       .on("error", (error) =>
-        reject(new Error(`Video processing error: ${error.message}`))
+        reject(new Error(`VideoItem processing error: ${error.message}`))
       );
   });
 };

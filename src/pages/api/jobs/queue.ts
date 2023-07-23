@@ -2,7 +2,11 @@ import { ObjectId } from "mongodb";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
-import { Status, type ProgressJob, type ProgressJobListItem } from "~/typing";
+import { Status, type ProgressJob, type JobItem } from "~/typing";
+
+interface Job extends Omit<JobItem, "_id"> {
+  _id: ObjectId;
+}
 
 /**
  * id is videoId
@@ -28,7 +32,7 @@ export default async function handler(
   if (req.method === "GET") {
     const db = await getDb();
     const jobs = await db
-      .collection<ProgressJobListItem>(Collections.Jobs)
+      .collection<Job>(Collections.Jobs)
       .aggregate([
         {
           $lookup: {
@@ -42,11 +46,6 @@ export default async function handler(
           $unwind: "$video",
         },
         {
-          $sort: {
-            updatedAt: -1,
-          },
-        },
-        {
           $project: {
             _id: 1,
             progress: 1,
@@ -54,6 +53,14 @@ export default async function handler(
             formatItag: 1,
             videoTitle: "$video.videoDetails.title",
             updatedAt: 1,
+          },
+        },
+        {
+          $match: { status: Status.ready },
+        },
+        {
+          $sort: {
+            updatedAt: -1,
           },
         },
       ])
