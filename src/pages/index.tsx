@@ -1,12 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import type { NextPage } from "next";
-import { useEffect, useState, type ChangeEventHandler, type FC } from "react";
+import { useEffect, useState, type ChangeEventHandler } from "react";
 import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
 } from "~/components/FormatsButtonGroup";
+import Heading from "~/components/Heading";
+import ProcessingArea from "~/components/ProcessingArea";
+import Title from "~/components/Title";
 import Toast from "~/components/Toast";
 import UrlInput from "~/components/UrlInput";
+import Wrapper from "~/components/Wrapper";
 import {
+  getAllJobsInQueue,
   getFilePaths,
   getJobInfo,
   sendJobToQueue,
@@ -21,7 +26,16 @@ const Home: NextPage = () => {
   const [jobId, setJobId] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
-  const { data: files } = useQuery(["filePaths"], getFilePaths);
+  const { data: files } = useQuery(["filePaths"], getFilePaths, {
+    initialData: [],
+  });
+
+  const { data: processingJobs } = useQuery(
+    ["processingJobs"],
+    getAllJobsInQueue,
+    { initialData: [] }
+  );
+  // console.log(processingJobs, files);
 
   const { isFetching: isGrabbing, refetch } = useQuery(
     ["dataFromYoutube"],
@@ -61,15 +75,17 @@ const Home: NextPage = () => {
 
   return (
     <Wrapper>
-      <PageHeading />
+      <Title />
       <UrlInput
         value={url}
         isLoading={isGrabbing}
         onGrabButtonClick={handleGrabClick}
         onInputChange={handleUrlChange}
       />
+
       {!!options.length && (
         <div>
+          <Heading>Select Formats</Heading>
           <FormatsButtonGroup
             options={options}
             value={selectedFormat}
@@ -86,18 +102,16 @@ const Home: NextPage = () => {
         </div>
       )}
 
-      {!!files?.length && (
+      {!!files.length && (
         <div>
-          <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-white">
-            Click to Download
-          </h1>
+          <Heading>Click to Download</Heading>
           <div className="flex flex-col justify-center gap-4">
             {files?.map((file) => (
               <a
                 key={file.name}
                 href={file.path}
                 target="_blank"
-                className="btn-primary btn rounded-md"
+                className="btn-info btn-outline btn"
               >
                 {file.name}
               </a>
@@ -105,23 +119,12 @@ const Home: NextPage = () => {
           </div>
         </div>
       )}
+
+      {!!processingJobs.length && <ProcessingArea jobs={processingJobs} />}
+
       <Toast message={msg} open={open} onClose={() => setOpen(false)} />
     </Wrapper>
   );
 };
-
-const PageHeading: FC = () => (
-  <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-    Grab Your <span className="text-[hsl(280,100%,70%)]">Youtube</span>
-  </h1>
-);
-
-const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => (
-  <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
-    <div className="container flex max-w-max flex-col justify-center gap-12 px-4 py-16">
-      {children}
-    </div>
-  </main>
-);
 
 export default Home;

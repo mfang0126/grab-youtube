@@ -27,6 +27,19 @@ export interface YoutubeDetails {
   formats: Format[];
 }
 
+export interface ProgressJobListItem {
+  _id: ObjectId;
+  progress?: number;
+  formatItag?: number;
+  status?: Status;
+  updatedAt?: Date;
+  videoTitle: string;
+}
+
+export interface ProcessingJobItem extends Omit<ProgressJobListItem, "_id"> {
+  _id: string;
+}
+
 export interface ProgressJob {
   _id: ObjectId;
   videoId: ObjectId;

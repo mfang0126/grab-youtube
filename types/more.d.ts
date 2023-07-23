@@ -11,7 +11,6 @@ declare global {
     interface Global {
       db: Db;
       client: MongoClient;
-      queueResponse: NextApiResponse;
     }
   }
 }

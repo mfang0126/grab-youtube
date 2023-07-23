@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { YoutubeDetails } from "~/typing";
+import type { ProcessingJobItem, YoutubeDetails } from "~/typing";
 
 interface FilePath {
   name: string;
@@ -18,3 +18,9 @@ export const sendJobToQueue = (id: string, format: string) =>
   axios
     .post<FilePath[]>("/api/jobs/queue", { id, format })
     .then((res) => res.data);
+
+export const getAllJobsInQueue = () =>
+  axios.get<ProcessingJobItem[]>("/api/jobs/queue").then((res) => {
+    console.log(res.data);
+    return res.data;
+  });

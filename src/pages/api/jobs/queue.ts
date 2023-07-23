@@ -2,11 +2,7 @@ import { ObjectId } from "mongodb";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
-import {
-  closeQueueResponse,
-  initQueueResponse,
-} from "~/services/youtube-services";
-import { Status, type ProgressJob } from "~/typing";
+import { Status, type ProgressJob, type ProgressJobListItem } from "~/typing";
 
 /**
  * id is videoId
@@ -29,9 +25,45 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method === "GET") {
+    const db = await getDb();
+    const jobs = await db
+      .collection<ProgressJobListItem>(Collections.Jobs)
+      .aggregate([
+        {
+          $lookup: {
+            from: "videos",
+            localField: "videoId",
+            foreignField: "_id",
+            as: "video",
+          },
+        },
+        {
+          $unwind: "$video",
+        },
+        {
+          $sort: {
+            updatedAt: -1,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            progress: 1,
+            status: 1,
+            formatItag: 1,
+            videoTitle: "$video.videoDetails.title",
+            updatedAt: 1,
+          },
+        },
+      ])
+      .toArray();
+
+    return res.json(jobs);
+  }
+
   // Add a new job to the queue
   if (req.method === "POST") {
-    initQueueResponse(res);
     const { id, format } = req.body as QueueJobPayload;
 
     if (!id || (format && !id)) {
@@ -55,8 +87,7 @@ export default async function handler(
       throw new Error(`${id} - Cannot find the job data.`);
     }
 
-    closeQueueResponse();
-    res.json({ id, format });
+    return res.json({ id, format });
   }
 
   // Update status to a job in the queue
@@ -85,8 +116,10 @@ export default async function handler(
       throw new Error(`${id} - Cannot find the job data.`);
     }
 
-    res.json(value);
+    return res.json(value);
   }
+
+  return { code: 400 };
 }
 
 const isStatus = (input: string): boolean => {

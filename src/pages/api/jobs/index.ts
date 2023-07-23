@@ -18,19 +18,20 @@ export default async function handler(
   const db = await getDb();
 
   if (videoId) {
-    console.log(`${videoId} - Found videoId`);
     // Get job data by videoId
     const job = await db
       .collection<YoutubeDetails>(Collections.Videos)
       .findOne({ videoId });
 
     if (job?._id) {
-      console.log(`${videoId} - Found video data.`);
+      console.log(`${videoId} - Found video data in database.`);
       return res.json(job);
     }
   }
 
   if (url) {
+    console.log(`${videoId} - New video request.`);
+
     // Request job data from youtube
     const grabbedInfo = await requestInfoFromYoutube(url);
 
