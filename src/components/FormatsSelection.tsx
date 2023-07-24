@@ -6,7 +6,7 @@ import Heading from "./Heading";
 
 interface FormatSelectionProps {
   options: Format[];
-  value: Format;
+  value: Format | null;
   onChange: FormatsButtonGroupProps["onChange"];
   onClick: () => void;
 }

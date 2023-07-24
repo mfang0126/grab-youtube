@@ -8,6 +8,7 @@ import Head from "next/head";
 import { type ReactNode } from "react";
 import "~/styles/globals.css";
 import { SWRConfig } from "swr";
+import { ToastProvider } from "~/contexts/ToastContext";
 
 const App: NextComponentType<AppContext, AppInitialProps, AppLayoutProps> = ({
   Component,
@@ -17,12 +18,14 @@ const App: NextComponentType<AppContext, AppInitialProps, AppLayoutProps> = ({
 
   return (
     <SWRConfig value={{ revalidateOnFocus: false }}>
-      <Head>
-        <title>Grab Your Youtube</title>
-        <meta name="description" content="Grab Your Youtube" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      {getLayout(<Component {...pageProps} />)}
+      <ToastProvider>
+        <Head>
+          <title>Grab Your Youtube</title>
+          <meta name="description" content="Grab Your Youtube" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        {getLayout(<Component {...pageProps} />)}
+      </ToastProvider>
     </SWRConfig>
   );
 };

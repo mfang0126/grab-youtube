@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
 import { Status, type ProgressJob, type JobItem } from "~/typing";
+import { isStatus } from "~/utils/stringHelper";
 
 interface Job extends Omit<JobItem, "_id"> {
   _id: ObjectId;
@@ -128,7 +129,3 @@ export default async function handler(
 
   return { code: 400 };
 }
-
-const isStatus = (input: string): boolean => {
-  return Object.values(Status).includes(input as Status);
-};

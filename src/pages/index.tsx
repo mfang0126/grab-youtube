@@ -4,39 +4,43 @@ import type { NextPage } from "next";
 import { useEffect, useState, type ChangeEventHandler } from "react";
 import useSWR from "swr";
 import DownloadFiles from "~/components/DownloadFilesList";
-import FormatsButtonGroup, {
-  type FormatsButtonGroupProps,
-} from "~/components/FormatsButtonGroup";
-import Heading from "~/components/Heading";
+import { type FormatsButtonGroupProps } from "~/components/FormatsButtonGroup";
+import FormatSelection from "~/components/FormatsSelection";
 import JobsList from "~/components/JobsList";
 import Title from "~/components/Title";
 import Toast from "~/components/Toast";
 import UrlInput from "~/components/UrlInput";
 import Wrapper from "~/components/Wrapper";
+import useProgress from "~/hooks/useProgress";
+import useToast from "~/hooks/useToast";
 import {
-  getJobsFromQueue,
   getFilePaths,
+  getAllQueueJobs,
+  getVideo,
   sendJobToQueue,
-  getVideos,
 } from "~/services/api-service";
 import { type Format } from "~/typing";
 
 const Home: NextPage = () => {
   const [url, setUrl] = useState("");
-  const [open, setOpen] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [live, setLive] = useState(false);
   const [options, setOptions] = useState<Format[]>([]);
   const [jobId, setJobId] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
-  const { data: files } = useSWR("files", getFilePaths);
-  const { data: jobs } = useSWR("jobs", getJobsFromQueue);
+  const { data: files } = useSWR("/api/files-path", getFilePaths);
+  const { data: jobs, mutate: mutateJobs } = useSWR("jobs", () =>
+    getAllQueueJobs()
+  );
   const { isLoading: isGrabbing, mutate } = useSWR("videos", async () => {
     if (url) {
-      const videos = await getVideos(url);
+      const videos = await getVideo(url);
       return videos;
     }
   });
+
+  const { toast } = useToast();
+  const progress = useProgress(live);
 
   const handleGrabClick = () => {
     setOptions([]);
@@ -56,12 +60,18 @@ const Home: NextPage = () => {
 
   const handleDownloadBtnClick = () => {
     if (selectedFormat?.itag && jobId) {
-      void sendJobToQueue(jobId, `${selectedFormat.itag}`).then(() => {
-        setOpen(true);
-        setMsg("Your job is in the line now.");
-      });
+      void sendJobToQueue(jobId, `${selectedFormat.itag}`)
+        .then(() => {
+          toast({
+            message:
+              "Your job is in the line now and check your download status at the bottom of the page",
+          });
+        })
+        .then(() => mutateJobs());
     }
   };
+
+  const handleLiveButton = () => setLive(!live);
 
   // TODO: Remove once finish testing.
   useEffect(() => {
@@ -78,27 +88,31 @@ const Home: NextPage = () => {
         onInputChange={handleUrlChange}
       />
 
-      {!!options.length && (
-        <div>
-          <Heading>Select Formats</Heading>
-          <FormatsButtonGroup
-            options={options}
-            value={selectedFormat}
-            onChange={handleFormatChange}
-          />
-          {selectedFormat && (
-            <button
-              className="btn-accent btn w-full"
-              onClick={handleDownloadBtnClick}
-            >
-              Download
-            </button>
-          )}
-        </div>
+      {options.length > 0 && (
+        <FormatSelection
+          options={options ?? []}
+          value={selectedFormat}
+          onChange={handleFormatChange}
+          onClick={handleDownloadBtnClick}
+        />
       )}
-      <DownloadFiles files={files ?? []} />
-      <JobsList jobs={jobs ?? []} />
-      <Toast message={msg} open={open} onClose={() => setOpen(false)} />
+
+      {!!files?.length && <DownloadFiles files={files} />}
+
+      {!!jobs?.length && (
+        <JobsList
+          jobs={jobs}
+          progress={progress}
+          action={
+            <button
+              className={`${live ? "btn-error" : "btn-ghost"} btn`}
+              onClick={handleLiveButton}
+            >
+              {live ? "Stop" : "Live"}
+            </button>
+          }
+        />
+      )}
     </Wrapper>
   );
 };

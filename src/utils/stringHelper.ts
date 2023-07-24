@@ -1,3 +1,5 @@
+import { Status } from "~/typing";
+
 const YOUTUBE_REGEX =
   /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
 const VIDEO_ID_REGEX = /\/watch\?v=([a-zA-Z0-9-_]+)/;
@@ -32,4 +34,8 @@ export const getYouTubeVideoId = (url: string): string => {
   }
 
   return videoId ?? "";
+};
+
+export const isStatus = (input: string): boolean => {
+  return Object.values(Status).includes(input as Status);
 };

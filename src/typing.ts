@@ -20,10 +20,6 @@ export enum Status {
   error = "error",
 }
 
-export interface Video extends Omit<VideoItem, "_id"> {
-  _id: ObjectId;
-}
-
 export interface VideoItem {
   _id: string;
   videoId: string;
@@ -31,35 +27,31 @@ export interface VideoItem {
   formats: Format[];
 }
 
-export interface DownloadFile {
-  name: string;
-  path: string;
-}
-
-export interface Job extends Omit<JobItem, "_id"> {
+export interface Video extends Omit<VideoItem, "_id"> {
   _id: ObjectId;
 }
 
-export interface JobItem {
-  _id: string;
+interface JobBase {
   progress?: number;
   formatItag?: number;
   status?: Status;
   updatedAt?: Date;
+}
+
+export interface JobItem extends JobBase {
+  _id: string;
   videoTitle: string;
 }
 
-export interface ProgressJobItem {
-  _id: string;
+export interface ProgressJob extends JobBase {
+  _id: ObjectId;
   videoId: ObjectId;
-  progress?: number;
-  formatItag?: number;
-  status?: Status;
-  updatedAt?: Date;
   createAt?: Date;
 }
-export interface ProgressJob extends Omit<ProgressJobItem, "_id"> {
-  _id: ObjectId;
+
+export interface DownloadFile {
+  name: string;
+  path: string;
 }
 
 export type Format = Pick<

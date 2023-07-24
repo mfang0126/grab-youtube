@@ -3,11 +3,20 @@ import path from "path";
 import type { Readable } from "stream";
 import ytdl, { type videoFormat } from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
-import { FormatType, Status, type Format, type Video } from "~/typing";
+import {
+  FormatType,
+  Status,
+  type Format,
+  type Video,
+  type ProgressJob,
+} from "~/typing";
 import { mergeAudioAndVideo } from "~/utils/mergeAudioVideo";
 import { removeFilesWithExtensions } from "~/utils/removeFilesWithExtensions";
 import { sanitizeFileName } from "~/utils/stringHelper";
 import { AudioFormatMap } from "~/youtubeFormats";
+import { getDb } from "./mongodb";
+import { ObjectId } from "mongodb";
+import { Collections } from "~/entities";
 
 interface ProgressData {
   progress: number;
@@ -16,17 +25,25 @@ interface ProgressData {
 
 type Notifyer = (data: ProgressData) => Promise<void>;
 
-let presentProgress: number;
+let presentProgress = 0;
+let videoJobId: ObjectId;
 
-export const notifyProgress: Notifyer = (data) => {
+// The job is under /api/cron
+export const notifyProgress: Notifyer = async (data) => {
   const newProgress = Math.round(data.progress);
 
   if (newProgress > presentProgress) {
     presentProgress = newProgress;
     console.log({ progress: newProgress, status: data.status });
-  }
 
-  return Promise.resolve();
+    const db = await getDb();
+    await db
+      .collection<ProgressJob>(Collections.Jobs)
+      .updateOne(
+        { _id: new ObjectId(videoJobId) },
+        { $set: { progress: newProgress } }
+      );
+  }
 };
 
 const createOutputDirectory = () => {
@@ -65,6 +82,8 @@ export const generateVideo = async (
 ) => {
   const { videoDetails, formats } = selectedFormat;
   const { title } = videoDetails;
+
+  videoJobId = selectedFormat._id;
 
   // format has audio and video. Only use it if we don't have matched format.
   const compromiseMatched = formats.find(
