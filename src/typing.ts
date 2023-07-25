@@ -22,7 +22,7 @@ export enum Status {
 
 export interface VideoItem {
   _id: string;
-  videoId: string;
+  youtubeVideoId: string;
   videoDetails: MoreVideoDetails;
   formats: Format[];
 }

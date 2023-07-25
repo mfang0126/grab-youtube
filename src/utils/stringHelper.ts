@@ -28,12 +28,12 @@ export const getYouTubeVideoId = (url: string): string => {
   }
 
   const match = url.match(VIDEO_ID_REGEX);
-  const videoId = match?.[1];
-  if (videoId && !videoId.match(VIDEO_ID_VALIDATION_REGEX)) {
+  const youtubeVideoId = match?.[1];
+  if (youtubeVideoId && !youtubeVideoId.match(VIDEO_ID_VALIDATION_REGEX)) {
     return "";
   }
 
-  return videoId ?? "";
+  return youtubeVideoId ?? "";
 };
 
 export const isStatus = (input: string): boolean => {

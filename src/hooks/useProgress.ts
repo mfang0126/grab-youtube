@@ -13,8 +13,9 @@ interface Progress {
 // get the current progress of the downloading job
 export default function useProgress(live: boolean) {
   const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState(Status.ready);
 
-  const { data: downloadingJob } = useSWR(["jobs", "status"], () =>
+  const { data: downloadingJob } = useSWR("/api/jobs/queue", () =>
     getAllQueueJobs(Status.downloading)
   );
 
@@ -30,6 +31,7 @@ export default function useProgress(live: boolean) {
       const data = JSON.parse(event.data) as Progress;
       console.log("progress", data);
       setProgress(data.progress);
+      setStatus(data.status);
     };
     eventSource.onerror = (event: Event) => {
       console.error("EventSource error:", event);
@@ -39,5 +41,5 @@ export default function useProgress(live: boolean) {
     return () => eventSource.close();
   }, [downloadingJob, live]);
 
-  return progress;
+  return { progress, status };
 }

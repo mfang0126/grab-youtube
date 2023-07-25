@@ -30,7 +30,12 @@ export default async function handler(
     return res.json(`No job to process.`);
   }
 
-  await generateVideo(video, job.formatItag);
+  try {
+    await generateVideo(video, job.formatItag);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).json(error);
+  }
 
   await db.collection<ProgressJob>(Collections.Jobs).findOneAndUpdate(
     { _id: job._id },

@@ -19,22 +19,22 @@ export default async function handler(
     throw { code: 400 };
   }
 
-  const videoId = getYouTubeVideoId(url);
+  const youtubeVideoId = getYouTubeVideoId(url);
   const db = await getDb();
 
-  if (videoId) {
-    // Get job data by videoId
+  if (youtubeVideoId) {
+    // Get job data by youtubeVideoId
     const job = await db
       .collection<Video>(Collections.Videos)
-      .findOne({ videoId });
+      .findOne({ videoId: youtubeVideoId });
 
     if (job?._id) {
-      console.log(`${videoId} - Found video data in database.`);
+      console.log(`${youtubeVideoId} - Found video data in database.`);
       return res.json(job);
     }
   }
 
-  console.log(`${videoId} - New video request.`);
+  console.log(`${youtubeVideoId} - New video request.`);
 
   // Request job data from youtube
   const grabbedInfo = await requestInfoFromYoutube(url);
@@ -48,7 +48,7 @@ export default async function handler(
   const { value } = await db
     .collection<Video>(Collections.Videos)
     .findOneAndUpdate(
-      { videoId: grabbedInfo.videoId },
+      { videoId: grabbedInfo.youtubeVideoId },
       { $set: grabbedInfo },
       { upsert: true, returnDocument: "after" }
     );
@@ -59,6 +59,6 @@ export default async function handler(
     });
   }
 
-  console.log(`${videoId} - Pull info from youtube`);
+  console.log(`${youtubeVideoId} - Pull info from youtube`);
   res.json({ ...grabbedInfo, _id: value?._id });
 }

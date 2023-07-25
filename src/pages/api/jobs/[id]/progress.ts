@@ -2,8 +2,9 @@ import { ObjectId } from "mongodb";
 import { type NextApiRequest, type NextApiResponse } from "next";
 import { Collections } from "~/entities";
 import { getDb } from "~/services/mongodb";
-import type { ProgressJob } from "~/typing";
+import { Status, type ProgressJob } from "~/typing";
 
+// Get the progress of the downloading job.
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   let progress: number | null = null;
 
@@ -19,6 +20,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const interval = setInterval(() => {
     void (async () => {
       const db = await getDb();
+
       const result = await db
         .collection<ProgressJob>(Collections.Jobs)
         .findOne({
@@ -30,11 +32,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.end();
       }
 
+      if (result.status === Status.completed) {
+        console.log("Download completed.");
+        res.write(
+          `data: ${JSON.stringify({ progress, status: result.status })} \n\n`
+        );
+        return res.end();
+      }
+
       progress = result.progress;
       res.write(`data: ${JSON.stringify({ progress })} \n\n`);
     })();
   }, 1000);
 
+  // Keep alive for EventSource
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     Connection: "keep-alive",

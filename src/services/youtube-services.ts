@@ -26,7 +26,7 @@ interface ProgressData {
 type Notifyer = (data: ProgressData) => Promise<void>;
 
 let presentProgress = 0;
-let videoJobId: ObjectId;
+let videoId: ObjectId;
 
 // The job is under /api/cron
 export const notifyProgress: Notifyer = async (data) => {
@@ -37,12 +37,16 @@ export const notifyProgress: Notifyer = async (data) => {
     console.log({ progress: newProgress, status: data.status });
 
     const db = await getDb();
-    await db
+    const result = await db
       .collection<ProgressJob>(Collections.Jobs)
       .updateOne(
-        { _id: new ObjectId(videoJobId) },
-        { $set: { progress: newProgress } }
+        { _id: new ObjectId(videoId) },
+        { $set: { progress: newProgress, status: data.status } }
       );
+
+    if (!result.upsertedId) {
+      throw new Error("Error on updating job.");
+    }
   }
 };
 
@@ -58,9 +62,10 @@ const downloadFile = (stream: Readable, fileName: string) =>
 
     const writeStream = fs.createWriteStream(filePath);
     stream.pipe(writeStream);
-    writeStream.on("error", (error) =>
-      reject(new Error(`File writing error: ${error.message}`))
-    );
+    writeStream.on("error", (error) => {
+      console.error(error);
+      reject(new Error(`File writing error: ${error.message}`));
+    });
 
     stream.on(
       "progress",
@@ -71,9 +76,6 @@ const downloadFile = (stream: Readable, fileName: string) =>
         })
     );
     stream.on("end", () => resolve(filePath));
-    stream.on("error", (error) =>
-      reject(new Error(`VideoItem processing error: ${error.message}`))
-    );
   });
 
 export const generateVideo = async (
@@ -83,8 +85,8 @@ export const generateVideo = async (
   const { videoDetails, formats } = selectedFormat;
   const { title } = videoDetails;
 
-  videoJobId = selectedFormat._id;
-
+  videoId = selectedFormat._id;
+  console.log(`Job started for video ID: ${videoId.toString()}`);
   // format has audio and video. Only use it if we don't have matched format.
   const compromiseMatched = formats.find(
     (format) => format.hasAudio && format.hasVideo
@@ -109,7 +111,8 @@ export const generateVideo = async (
   const { hasAudio: matchedHasAudio, container: matchedContainer } =
     formatMatched;
   createOutputDirectory();
-  void notifyProgress({ progress: 0, status: Status.pending });
+
+  await notifyProgress({ progress: 0, status: Status.pending });
 
   // Process video selected format has no audio.
   if (!matchedHasAudio) {
@@ -124,93 +127,41 @@ export const generateVideo = async (
     }
     console.log("MATCHED AUDIO FORMAT: ", matchedAudioFormat);
 
-    const { itag: matchedAudioFormatItag } = matchedAudioFormat;
+    try {
+      const { itag: matchedAudioFormatItag } = matchedAudioFormat;
+      const audioStream = ytdl(videoUrl, { quality: matchedAudioFormatItag });
+      const videoStream = ytdl(videoUrl, { quality: formatItag });
 
-    const audioStream = ytdl(videoUrl, { quality: matchedAudioFormatItag });
-    const videoStream = ytdl(videoUrl, { quality: formatItag });
+      // Memory might be funny from here.
+      const audioFilePath = await downloadFile(audioStream, audioName);
+      const videoFilePath = await downloadFile(videoStream, videoName);
 
-    // Memory might be funny from here.
-    const downloadAudio = downloadFile(audioStream, audioName);
-    const downloadVideo = downloadFile(videoStream, videoName);
+      const outputPath = path.join(OUTPUT_PATH, outputName);
+      const writeStream = fs.createWriteStream(outputPath);
 
-    return Promise.all([downloadAudio, downloadVideo])
-      .then(async ([audioFilePath, videoFilePath]) => {
-        const outputPath = path.join(OUTPUT_PATH, outputName);
-        const writeStream = fs.createWriteStream(outputPath);
-
-        writeStream.on("error", (error) => {
-          throw new Error(`File writing error: ${error.message}`);
-        });
-
-        await mergeAudioAndVideo(
-          videoFilePath,
-          audioFilePath,
-          outputPath,
-          (data) => {
-            void notifyProgress(data);
-          }
-        );
-        await removeFilesWithExtensions();
-        return notifyProgress({ progress: 100, status: Status.completed });
-      })
-      .catch((e) => {
-        console.log(e);
-        throw new Error((e as Error).message);
+      writeStream.on("error", (error) => {
+        throw new Error(`File writing error: ${error.message}`);
       });
+
+      await mergeAudioAndVideo(
+        videoFilePath,
+        audioFilePath,
+        outputPath,
+        (data) => notifyProgress(data)
+      );
+    } catch (error) {
+      throw new Error(
+        `Error on merging audio and video: ${(error as Error).message}`
+      );
+    }
+
+    await removeFilesWithExtensions();
+    return notifyProgress({ progress: 100, status: Status.completed });
   }
 
   // Process video selected format has audio.
   const video = ytdl(videoUrl, { quality: formatItag });
-  const filePath = path.join(OUTPUT_PATH, outputName);
-
-  const writeStream = fs.createWriteStream(filePath);
-  video.pipe(writeStream);
-  writeStream.on("error", (error) => {
-    throw new Error(`File writing error: ${error.message}`);
-  });
-
-  return new Promise<void>((resolve, reject) => {
-    video
-      .on(
-        "progress",
-        (_, downloaded, total) =>
-          void notifyProgress({
-            progress: (downloaded / total) * 100,
-            status: Status.downloading,
-          })
-      )
-      .on(
-        "end",
-        () =>
-          void notifyProgress({
-            progress: 100,
-            status: Status.completed,
-          }).then(() => resolve())
-      )
-      .on("error", (error) =>
-        reject(new Error(`VideoItem processing error: ${error.message}`))
-      );
-  });
-};
-
-export const requestInfoFromYoutube = async (url: string) => {
-  if (typeof url !== "string") {
-    throw new Error("Required parameters are missing.");
-  }
-
-  try {
-    const { videoDetails, formats } = await ytdl.getInfo(url);
-    const { videoId } = videoDetails;
-
-    const filteredFormats = filterFormats(formats);
-    return {
-      videoId,
-      videoDetails,
-      formats: filteredFormats,
-    };
-  } catch (error) {
-    console.error(`Error on requesting video info from YouTube: `, error);
-  }
+  return downloadFile(video, outputName);
 };
 
 function getFormatType(format: videoFormat) {
@@ -241,3 +192,23 @@ function filterFormats(formats: videoFormat[]) {
     }, [] as Format[])
     .sort((a, b) => a.itag - b.itag);
 }
+
+export const requestInfoFromYoutube = async (url: string) => {
+  if (typeof url !== "string") {
+    throw new Error("Required parameters are missing.");
+  }
+
+  try {
+    const { videoDetails, formats } = await ytdl.getInfo(url);
+    const { videoId } = videoDetails;
+
+    const filteredFormats = filterFormats(formats);
+    return {
+      youtubeVideoId: videoId,
+      videoDetails,
+      formats: filteredFormats,
+    };
+  } catch (error) {
+    console.error(`Error on requesting video info from YouTube: `, error);
+  }
+};

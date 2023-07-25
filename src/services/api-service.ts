@@ -10,9 +10,9 @@ export const getFilePaths = () =>
       return [];
     });
 
-export const getVideo = (url: string, videoId?: string) =>
+export const getVideo = (url: string, youtubeVideoId?: string) =>
   axios
-    .post<VideoItem>("/api/video", { url, videoId })
+    .post<VideoItem>("/api/video", { url, id: youtubeVideoId })
     .then((res) => res.data)
     .catch((err) => {
       console.error(err);
