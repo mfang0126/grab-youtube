@@ -1,13 +1,9 @@
-import {
-  type FC,
-  type MouseEventHandler,
-  type ChangeEventHandler,
-} from "react";
+import { type FC, type ChangeEventHandler, type MouseEvent } from "react";
 
 export interface UrlInputProps {
   value: string;
   isLoading?: boolean;
-  onGrabButtonClick: MouseEventHandler<HTMLButtonElement>;
+  onGrabButtonClick: (event: MouseEvent<HTMLButtonElement>) => Promise<void>;
   onInputChange: ChangeEventHandler<HTMLInputElement>;
 }
 
@@ -30,7 +26,7 @@ const UrlInput: FC<UrlInputProps> = ({
       <button
         className="join-item btn rounded"
         type="button"
-        onClick={onGrabButtonClick}
+        onClick={(e) => void onGrabButtonClick(e)}
         disabled={isLoading}
       >
         {isLoading ? (

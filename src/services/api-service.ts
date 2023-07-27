@@ -28,9 +28,18 @@ export const sendJobToQueue = (id: string, format: string) =>
       return [];
     });
 
-export const getAllQueueJobs = (status?: Status) =>
+export const getJobsByStatus = (status?: Status[]) =>
   axios
     .get<JobItem[]>("/api/jobs/queue", { params: { status } })
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error(err);
+      return [] as JobItem[];
+    });
+
+export const getCronTriggered = () =>
+  axios
+    .get<JobItem[]>("/api/cron")
     .then((res) => res.data)
     .catch((err) => {
       console.error(err);

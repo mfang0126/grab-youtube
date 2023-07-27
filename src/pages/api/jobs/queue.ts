@@ -31,6 +31,8 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method === "GET") {
+    const status = req.query["status[]"] as string[];
+    const statusMatcher = status ? status : [Status.ready];
     const db = await getDb();
     const jobs = await db
       .collection<Job>(Collections.Jobs)
@@ -53,11 +55,12 @@ export default async function handler(
             status: 1,
             formatItag: 1,
             videoTitle: "$video.videoDetails.title",
+            videoQuality: "$video.videoDetails.quality",
             updatedAt: 1,
           },
         },
         {
-          $match: { status: Status.ready },
+          $match: { status: { $in: statusMatcher } },
         },
         {
           $sort: {

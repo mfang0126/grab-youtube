@@ -40,6 +40,7 @@ interface JobBase {
 
 export interface JobItem extends JobBase {
   _id: string;
+  videoQuality: string;
   videoTitle: string;
 }
 

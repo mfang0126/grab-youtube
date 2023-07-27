@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import useSWR from "swr";
-import { getAllQueueJobs } from "~/services/api-service";
-import { Status } from "~/typing";
+import { useEffect, useRef, useState } from "react";
+import { Status, type JobItem } from "~/typing";
+import useToast from "./useToast";
 
 interface Progress {
   progress: number;
@@ -11,35 +10,49 @@ interface Progress {
 }
 
 // get the current progress of the downloading job
-export default function useProgress(live: boolean) {
+export default function useProgress(live: boolean, runningJob?: JobItem) {
+  const eventSource = useRef<EventSource | null>(null);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState(Status.ready);
-
-  const { data: downloadingJob } = useSWR("/api/jobs/queue", () =>
-    getAllQueueJobs(Status.downloading)
-  );
+  const { toast } = useToast();
 
   useEffect(() => {
-    const job = downloadingJob?.[0];
-    console.log(job);
-    if (!job || !live) {
+    if (!live) {
       return;
     }
 
-    const eventSource = new EventSource(`/api/jobs/${job._id}/progress`);
-    eventSource.onmessage = (event: MessageEvent<string>) => {
-      const data = JSON.parse(event.data) as Progress;
-      console.log("progress", data);
-      setProgress(data.progress);
-      setStatus(data.status);
+    if (!runningJob) {
+      toast({ message: "No running job" });
+      return;
+    }
+
+    setProgress(runningJob.progress ?? 0);
+
+    if (eventSource.current) {
+      eventSource.current?.close();
+    }
+
+    eventSource.current = new EventSource(
+      `/api/jobs/${runningJob._id}/progress`
+    );
+    eventSource.current.onmessage = (event: MessageEvent<string>) => {
+      const { progress, status } = JSON.parse(event.data) as Progress;
+
+      setProgress(progress);
+      setStatus(status);
+
+      if (status === Status.completed) {
+        eventSource.current?.close();
+      }
     };
-    eventSource.onerror = (event: Event) => {
+    eventSource.current.onerror = (event: Event) => {
       console.error("EventSource error:", event);
-      eventSource?.close();
+      toast({ message: "Error on getting downloading progress" });
+      eventSource.current?.close();
     };
 
-    return () => eventSource.close();
-  }, [downloadingJob, live]);
+    return () => eventSource.current?.close();
+  }, [runningJob, live, toast]);
 
   return { progress, status };
 }

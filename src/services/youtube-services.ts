@@ -17,6 +17,7 @@ import { AudioFormatMap } from "~/youtubeFormats";
 import { getDb } from "./mongodb";
 import { ObjectId } from "mongodb";
 import { Collections } from "~/entities";
+import ProgressTracker from "~/libs/ProgressTracker";
 
 interface ProgressData {
   progress: number;
@@ -25,29 +26,18 @@ interface ProgressData {
 
 type Notifyer = (data: ProgressData) => Promise<void>;
 
-let presentProgress = 0;
+const tracker = new ProgressTracker();
 let videoId: ObjectId;
 
 // The job is under /api/cron
-export const notifyProgress: Notifyer = async (data) => {
-  const newProgress = Math.round(data.progress);
+const notifyProgress: Notifyer = async ({ progress, status }) => {
+  const roundProgress = Math.round(progress);
 
-  if (newProgress > presentProgress) {
-    presentProgress = newProgress;
-    console.log({ progress: newProgress, status: data.status });
-
-    const db = await getDb();
-    const result = await db
-      .collection<ProgressJob>(Collections.Jobs)
-      .updateOne(
-        { _id: new ObjectId(videoId) },
-        { $set: { progress: newProgress, status: data.status } }
-      );
-
-    if (!result.upsertedId) {
-      throw new Error("Error on updating job.");
-    }
-  }
+  await tracker.updateProgress(videoId, {
+    progress: roundProgress,
+    status,
+  });
+  console.log({ progress: roundProgress, status });
 };
 
 const createOutputDirectory = () => {
@@ -64,18 +54,24 @@ const downloadFile = (stream: Readable, fileName: string) =>
     stream.pipe(writeStream);
     writeStream.on("error", (error) => {
       console.error(error);
-      reject(new Error(`File writing error: ${error.message}`));
+      void notifyProgress({ progress: 0, status: Status.error }).then(() =>
+        reject(new Error(`File writing error: ${error.message}`))
+      );
     });
 
-    stream.on(
-      "progress",
-      (_, downloaded, total) =>
-        void notifyProgress({
-          progress: (downloaded / total) * 100,
-          status: Status.downloading,
-        })
-    );
-    stream.on("end", () => resolve(filePath));
+    stream.on("progress", (_, downloaded, total) => {
+      void notifyProgress({
+        progress: (downloaded / total) * 100,
+        status: Status.downloading,
+      });
+    });
+
+    stream.on("end", () => {
+      void notifyProgress({
+        progress: 100,
+        status: Status.completed,
+      }).then(() => resolve(filePath));
+    });
   });
 
 export const generateVideo = async (
@@ -125,12 +121,21 @@ export const generateVideo = async (
     if (!matchedAudioFormat) {
       throw new Error("No available audio format.");
     }
-    console.log("MATCHED AUDIO FORMAT: ", matchedAudioFormat);
+    console.log("MATCHED AUDIO FORMAT: ", matchedAudioFormat.mimeType);
 
     try {
       const { itag: matchedAudioFormatItag } = matchedAudioFormat;
-      const audioStream = ytdl(videoUrl, { quality: matchedAudioFormatItag });
-      const videoStream = ytdl(videoUrl, { quality: formatItag });
+      const audioStream = ytdl(videoUrl, {
+        quality: matchedAudioFormatItag,
+      }).on("error", (error) => {
+        throw new Error(`Audio stream error: ${error.message}`);
+      });
+      const videoStream = ytdl(videoUrl, { quality: formatItag }).on(
+        "error",
+        (error) => {
+          throw new Error(`Video stream error: ${error.message}`);
+        }
+      );
 
       // Memory might be funny from here.
       const audioFilePath = await downloadFile(audioStream, audioName);
@@ -147,7 +152,7 @@ export const generateVideo = async (
         videoFilePath,
         audioFilePath,
         outputPath,
-        (data) => notifyProgress(data)
+        (data) => void notifyProgress(data)
       );
     } catch (error) {
       throw new Error(
@@ -156,12 +161,16 @@ export const generateVideo = async (
     }
 
     await removeFilesWithExtensions();
-    return notifyProgress({ progress: 100, status: Status.completed });
+    return console.log("Downloaded one file with merging");
   }
 
   // Process video selected format has audio.
   const video = ytdl(videoUrl, { quality: formatItag });
-  return downloadFile(video, outputName);
+  const filePath = await downloadFile(video, outputName);
+  if (filePath) {
+    return console.log("Downloaded one file without merging");
+  }
+  return console.log("Downloaded one file without merging");
 };
 
 function getFormatType(format: videoFormat) {

@@ -11,9 +11,9 @@ export default async function handler(
   const db = await getDb();
   const job = await db.collection<ProgressJob>(Collections.Jobs).findOne(
     {
-      status: { $eq: Status.ready },
+      status: { $in: [Status.ready, Status.downloading] },
     },
-    { sort: { updatedAt: -1 } }
+    { sort: { status: -1, updatedAt: -1 } }
   );
 
   if (!job?.videoId) {
@@ -21,6 +21,8 @@ export default async function handler(
     return res.json(`No job to process.`);
   }
 
+  // TODO: check if we have file and we don't download.
+  // We can show the file directly.
   const video = await db
     .collection<Video>(Collections.Videos)
     .findOne({ _id: job.videoId });
@@ -37,12 +39,6 @@ export default async function handler(
     return res.status(400).json(error);
   }
 
-  await db.collection<ProgressJob>(Collections.Jobs).findOneAndUpdate(
-    { _id: job._id },
-    {
-      $set: { updatedAt: new Date(), status: Status.completed, progress: 100 },
-    }
-  );
-
-  return res.json(`Job's Done`);
+  console.log(`Job: ${job._id.toString()} finished.`);
+  return res.json(`Job: ${job._id.toString()} finished.`);
 }

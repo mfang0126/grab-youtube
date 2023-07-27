@@ -6,8 +6,6 @@ import { Status, type ProgressJob } from "~/typing";
 
 // Get the progress of the downloading job.
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  let progress: number | null = null;
-
   const { id } = req.query;
 
   if (typeof id !== "string") {
@@ -27,21 +25,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
           _id: new ObjectId(id),
         });
 
-      if (result?.progress === undefined) {
+      const { progress, status } = result ?? {};
+      if (progress === undefined) {
         console.log("Error on fetching job progress.");
         return res.end();
       }
 
-      if (result.status === Status.completed) {
+      if (status === Status.completed) {
         console.log("Download completed.");
-        res.write(
-          `data: ${JSON.stringify({ progress, status: result.status })} \n\n`
-        );
+        res.write(`data: ${JSON.stringify({ progress, status })} \n\n`);
         return res.end();
       }
 
-      progress = result.progress;
-      res.write(`data: ${JSON.stringify({ progress })} \n\n`);
+      res.write(`data: ${JSON.stringify({ progress, status })} \n\n`);
     })();
   }, 1000);
 

@@ -3,16 +3,17 @@ import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
 } from "./FormatsButtonGroup";
 import Heading from "./Heading";
+import type { MouseEvent } from "react";
 
-interface FormatSelectionProps {
+export interface FormatSelectionProps {
   options: Format[];
   value: Format | null;
   onChange: FormatsButtonGroupProps["onChange"];
-  onClick: () => void;
+  onDownloadClick: (event: MouseEvent<HTMLButtonElement>) => Promise<void>;
 }
 
 export default function FormatSelection({
-  onClick,
+  onDownloadClick,
   value,
   ...rest
 }: FormatSelectionProps) {
@@ -21,7 +22,10 @@ export default function FormatSelection({
       <Heading>Select Formats</Heading>
       <FormatsButtonGroup value={value} {...rest} />
       {value && (
-        <button className="btn-accent btn w-full" onClick={onClick}>
+        <button
+          className="btn-accent btn w-full"
+          onClick={(e) => void onDownloadClick(e)}
+        >
           Download
         </button>
       )}

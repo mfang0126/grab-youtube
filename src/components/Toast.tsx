@@ -2,14 +2,14 @@ import { useEffect } from "react";
 
 interface ToastProps {
   open?: boolean;
-  message: string;
+  message?: string;
   autoHideDuration?: number;
   onClose: () => void;
 }
 
 export default function Toast({
-  open,
-  message,
+  open = true,
+  message = "",
   autoHideDuration = 5000,
   onClose,
 }: ToastProps) {
@@ -30,7 +30,7 @@ export default function Toast({
   return (
     <div className="toast-end toast toast-top">
       <div className="alert alert-info">
-        <span>{message}</span>
+        <span className="max-w-sm truncate">{message}</span>
       </div>
     </div>
   );

@@ -1,4 +1,11 @@
-import { createContext, type FC, useState } from "react";
+import {
+  createContext,
+  type FC,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+import Toast from "~/components/Toast";
 
 interface Toast {
   message: string;
@@ -20,9 +27,13 @@ interface ToastProviderProps {
 export const ToastProvider: FC<ToastProviderProps> = ({ children }) => {
   const [toast, setToast] = useState<Toast | null>(null);
 
-  const showToast = (toast: Toast) => {
-    setToast(toast);
-  };
+  // Interesting story, and let's make a blog.
+  const showToast = useCallback(
+    (toast: Toast) => {
+      setToast(toast);
+    },
+    [setToast]
+  );
 
   const removeToast = () => {
     setToast(null);
@@ -31,6 +42,7 @@ export const ToastProvider: FC<ToastProviderProps> = ({ children }) => {
   return (
     <ToastContext.Provider value={{ toast, showToast, removeToast }}>
       {children}
+      <Toast message={toast?.message} onClose={removeToast} open={!!toast} />
     </ToastContext.Provider>
   );
 };
