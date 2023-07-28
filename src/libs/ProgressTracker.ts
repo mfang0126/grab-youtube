@@ -56,8 +56,7 @@ export default class ProgressTracker {
       progressToSave.map((p) => {
         return {
           updateOne: {
-            // It shouldn't be video id should be the job id.
-            filter: { videoId: p.id },
+            filter: { _id: p.id },
             update: { $set: { progress: p.progress, status: p.status } },
           },
         };

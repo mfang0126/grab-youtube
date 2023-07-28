@@ -3,48 +3,28 @@ import path from "path";
 import type { Readable } from "stream";
 import ytdl, { type videoFormat } from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
+import ProgressTracker from "~/libs/ProgressTracker";
 import {
   FormatType,
   Status,
   type Format,
-  type Video,
   type ProgressJob,
+  type Video,
 } from "~/typing";
 import { mergeAudioAndVideo } from "~/utils/mergeAudioVideo";
 import { removeFilesWithExtensions } from "~/utils/removeFilesWithExtensions";
 import { sanitizeFileName } from "~/utils/stringHelper";
 import { AudioFormatMap } from "~/youtubeFormats";
-import { getDb } from "./mongodb";
-import { ObjectId } from "mongodb";
-import { Collections } from "~/entities";
-import ProgressTracker from "~/libs/ProgressTracker";
 
 interface ProgressData {
   progress: number;
   status: Status;
 }
-
 type Notifyer = (data: ProgressData) => Promise<void>;
 
 const tracker = new ProgressTracker();
-let videoId: ObjectId;
-
-// The job is under /api/cron
-const notifyProgress: Notifyer = async ({ progress, status }) => {
-  const roundProgress = Math.round(progress);
-
-  await tracker.updateProgress(videoId, {
-    progress: roundProgress,
-    status,
-  });
-  console.log({ progress: roundProgress, status });
-};
-
-const createOutputDirectory = () => {
-  if (!fs.existsSync(OUTPUT_PATH)) {
-    fs.mkdirSync(OUTPUT_PATH, { recursive: true });
-  }
-};
+let processingVideo: Video;
+let processingJob: ProgressJob;
 
 const downloadFile = (stream: Readable, fileName: string) =>
   new Promise<string>((resolve, reject) => {
@@ -75,14 +55,17 @@ const downloadFile = (stream: Readable, fileName: string) =>
   });
 
 export const generateVideo = async (
-  selectedFormat: Video,
-  formatItag?: number
+  selectedVideo: Video,
+  selectedJob: ProgressJob
 ) => {
-  const { videoDetails, formats } = selectedFormat;
+  processingVideo = selectedVideo;
+  processingJob = selectedJob;
+
+  const formatItag = selectedJob.formatItag;
+  const { videoDetails, formats } = selectedVideo;
   const { title } = videoDetails;
 
-  videoId = selectedFormat._id;
-  console.log(`Job started for video ID: ${videoId.toString()}`);
+  console.log(`Job started for video ID: ${processingVideo._id.toString()}`);
   // format has audio and video. Only use it if we don't have matched format.
   const compromiseMatched = formats.find(
     (format) => format.hasAudio && format.hasVideo
@@ -103,7 +86,7 @@ export const generateVideo = async (
     title,
     formatMatched.qualityLabel
   );
-  const videoUrl = selectedFormat.videoDetails.video_url;
+  const videoUrl = selectedVideo.videoDetails.video_url;
   const { hasAudio: matchedHasAudio, container: matchedContainer } =
     formatMatched;
   createOutputDirectory();
@@ -171,6 +154,23 @@ export const generateVideo = async (
     return console.log("Downloaded one file without merging");
   }
   return console.log("Downloaded one file without merging");
+};
+
+// The job is under /api/cron
+const notifyProgress: Notifyer = async ({ progress, status }) => {
+  const roundProgress = Math.round(progress);
+
+  await tracker.updateProgress(processingJob._id, {
+    progress: roundProgress,
+    status,
+  });
+  console.log({ progress: roundProgress, status });
+};
+
+const createOutputDirectory = () => {
+  if (!fs.existsSync(OUTPUT_PATH)) {
+    fs.mkdirSync(OUTPUT_PATH, { recursive: true });
+  }
 };
 
 function getFormatType(format: videoFormat) {

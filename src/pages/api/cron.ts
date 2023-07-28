@@ -13,7 +13,7 @@ export default async function handler(
     {
       status: { $in: [Status.ready, Status.downloading] },
     },
-    { sort: { status: -1, updatedAt: -1 } }
+    { sort: { status: 1, updatedAt: -1 } }
   );
 
   if (!job?.videoId) {
@@ -33,7 +33,8 @@ export default async function handler(
   }
 
   try {
-    await generateVideo(video, job.formatItag);
+    // should add job id here.
+    await generateVideo(video, job);
   } catch (error) {
     console.log(error);
     return res.status(400).json(error);

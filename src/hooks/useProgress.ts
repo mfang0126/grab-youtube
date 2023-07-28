@@ -17,12 +17,7 @@ export default function useProgress(live: boolean, runningJob?: JobItem) {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!live) {
-      return;
-    }
-
-    if (!runningJob) {
-      toast({ message: "No running job" });
+    if (!live || !runningJob) {
       return;
     }
 

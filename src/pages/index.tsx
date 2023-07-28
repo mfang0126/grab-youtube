@@ -43,10 +43,13 @@ const Home: NextPage = () => {
       return jobs || [];
     }
   );
-  const { data: readyJobs, mutate: mutateReadyJobs } = useSWR(
-    "getAllJobs",
-    () => getJobsByStatus()
-  );
+  // const { data: readyJobs, mutate: mutateReadyJobs } = useSWR(
+  //   "getAllJobs",
+  //   async () => {
+  //     const jobs = await getJobsByStatus([Status.ready]);
+  //     return jobs;
+  //   }
+  // );
   const { data: runningJob, mutate: mutateRunningJob } = useSWR(
     "getRunningJob",
     async () => {
@@ -89,7 +92,7 @@ const Home: NextPage = () => {
     async () => {
       if (selectedFormat?.itag && jobId) {
         await sendJobToQueue(jobId, `${selectedFormat.itag}`);
-        await mutateReadyJobs();
+        await mutateJobs();
 
         toast({
           message: "The job will be started in 3 seconds",
@@ -99,16 +102,27 @@ const Home: NextPage = () => {
         void getCronTriggered();
 
         setTimeout(() => {
-          void (async () => {
-            await mutateRunningJob();
-            setLive(true);
-          })();
-        }, 1000);
+          const retry = setInterval(() => {
+            void (async () => {
+              toast({
+                message: "Trying to start the job...",
+              });
+
+              const hasRunningJob = await mutateRunningJob();
+              if (hasRunningJob) {
+                toast({
+                  message: "Job started!!!",
+                });
+                clearInterval(retry);
+                setLive(true);
+              }
+            })();
+          }, 1500);
+        }, 1500);
       }
     };
 
   const handleLiveButton = async () => {
-    console.log(runningJob);
     if (runningJob) {
       setLive(true);
     }
@@ -132,14 +146,12 @@ const Home: NextPage = () => {
 
         if (hasReadyJob) {
           void getCronTriggered();
+          void mutateRunningJob();
 
           setTimeout(() => {
-            void (async () => {
-              await mutateRunningJob();
-              toast({ message: "Start running new jobs from the jobs list." });
-              setLive(true);
-            })();
-          }, 1000);
+            toast({ message: "Start running new jobs from the jobs list." });
+            setLive(true);
+          }, 3000);
         }
       }
     }
@@ -150,11 +162,10 @@ const Home: NextPage = () => {
   // TODO: Remove once finish testing.
   useEffect(() => {
     if (runningJob) {
-      if (readyJobs?.length) {
-        setLive(true);
-      }
+      setLive(true);
       if (progressStatus === Status.completed) {
         void mutateJobs();
+        void mutateRunningJob();
         toast({ message: `Complete Job: ${runningJob.videoTitle}.` });
       }
       if (progressStatus === Status.downloading) {
@@ -167,7 +178,7 @@ const Home: NextPage = () => {
     }
 
     setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
-  }, [progressStatus, readyJobs?.length, runningJob, toast]);
+  }, [mutateJobs, mutateRunningJob, progressStatus, runningJob, toast]);
 
   return (
     <Wrapper>

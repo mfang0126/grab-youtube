@@ -32,7 +32,13 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     const status = req.query["status[]"] as string[];
-    const statusMatcher = status ? status : [Status.ready];
+    if (!status) {
+      return res.json([]);
+    }
+
+    const statusGroup = Array.isArray(status) ? status : [status];
+    const statusMatcher = statusGroup ? statusGroup : [];
+
     const db = await getDb();
     const jobs = await db
       .collection<Job>(Collections.Jobs)
