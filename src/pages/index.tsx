@@ -1,7 +1,7 @@
 "use client";
 
 import type { NextPage } from "next";
-import { useEffect, useState, type ChangeEventHandler } from "react";
+import { useEffect, useState, type ChangeEventHandler, useMemo } from "react";
 import useSWR from "swr";
 import DownloadFiles from "~/components/DownloadFilesList";
 import { type FormatsButtonGroupProps } from "~/components/FormatsButtonGroup";
@@ -32,31 +32,15 @@ const Home: NextPage = () => {
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
   const { data: files } = useSWR("/files-path", getFilePaths);
-  const { data: jobs, mutate: mutateJobs } = useSWR(
-    "getReadyJobs",
-    async () => {
-      const jobs = await getJobsByStatus([
-        Status.merging,
-        Status.downloading,
-        Status.ready,
-      ]);
-      return jobs || [];
-    }
-  );
-  // const { data: readyJobs, mutate: mutateReadyJobs } = useSWR(
-  //   "getAllJobs",
-  //   async () => {
-  //     const jobs = await getJobsByStatus([Status.ready]);
-  //     return jobs;
-  //   }
-  // );
-  const { data: runningJob, mutate: mutateRunningJob } = useSWR(
-    "getRunningJob",
-    async () => {
-      const [job] = await getJobsByStatus([Status.merging, Status.downloading]);
-      return job;
-    }
-  );
+  const { data: jobs, mutate: mutateJobs } = useSWR("getJobs", getJobsByStatus);
+
+  const runningJob = useMemo(() => {
+    return jobs?.find(
+      ({ status }) =>
+        status && [Status.downloading, Status.merging].includes(status)
+    );
+  }, [jobs]);
+
   const { isLoading: isGrabbing, mutate: mutateVideo } = useSWR(
     "getVideoInfo",
     async () => {
@@ -205,7 +189,8 @@ const Home: NextPage = () => {
         <JobsList
           jobs={jobs}
           progressJob={
-            runningJob && (
+            runningJob &&
+            live && (
               <ProgressJob
                 progress={progressNum}
                 quality={runningJob.videoQuality}

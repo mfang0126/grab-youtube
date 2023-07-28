@@ -37,7 +37,7 @@ export default async function handler(
     }
 
     const statusGroup = Array.isArray(status) ? status : [status];
-    const statusMatcher = statusGroup ? statusGroup : [];
+    const statusMatcher = statusGroup ? statusGroup : Object.values(Status);
 
     const db = await getDb();
     const jobs = await db
