@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { OUTPUT_PATH } from "~/config";
 
 /**
  * List all file paths in a directory.
@@ -50,3 +51,11 @@ export async function listFileNameInDir(
     return [];
   }
 }
+
+export const createOutputDirectory = async () => {
+  try {
+    await fs.access(OUTPUT_PATH);
+  } catch {
+    await fs.mkdir(OUTPUT_PATH, { recursive: true });
+  }
+};

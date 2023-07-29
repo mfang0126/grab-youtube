@@ -1,4 +1,5 @@
 import { Status } from "~/typing";
+import { VideoFormatMap } from "~/youtubeFormats";
 
 const YOUTUBE_REGEX =
   /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
@@ -38,4 +39,11 @@ export const getYouTubeVideoId = (url: string): string => {
 
 export const isStatus = (input: string): boolean => {
   return Object.values(Status).includes(input as Status);
+};
+
+export const getQualityByItag = (itag?: number) => {
+  if (!itag) {
+    return "N/A";
+  }
+  return VideoFormatMap[itag]?.resolution ?? "N/A";
 };

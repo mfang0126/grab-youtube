@@ -1,5 +1,5 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import { listFileNameInDir } from "~/utils/listMediaFilePaths";
+import { listFileNameInDir } from "~/utils/dirHelper";
 import { DOWNLOAD_PATH } from "~/config";
 import path from "path";
 

@@ -32,13 +32,10 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     const status = req.query["status[]"] as string[];
-    if (!status) {
-      return res.json([]);
-    }
-
     const statusGroup = Array.isArray(status) ? status : [status];
-    const statusMatcher = statusGroup ? statusGroup : Object.values(Status);
+    const statusMatcher = status ? statusGroup : Object.values(Status);
 
+    console.log(statusMatcher);
     const db = await getDb();
     const jobs = await db
       .collection<Job>(Collections.Jobs)
@@ -71,6 +68,7 @@ export default async function handler(
         {
           $sort: {
             updatedAt: -1,
+            status: 1,
           },
         },
       ])

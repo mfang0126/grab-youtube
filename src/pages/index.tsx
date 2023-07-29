@@ -9,6 +9,7 @@ import FormatSelection, {
   type FormatSelectionProps,
 } from "~/components/FormatsSelection";
 import JobsList from "~/components/JobsList";
+import JobsTable from "~/components/JobsTable";
 import { ProgressJob } from "~/components/ProgressJob";
 import Title from "~/components/Title";
 import UrlInput, { type UrlInputProps } from "~/components/UrlInput";
@@ -32,7 +33,9 @@ const Home: NextPage = () => {
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
   const { data: files } = useSWR("/files-path", getFilePaths);
-  const { data: jobs, mutate: mutateJobs } = useSWR("getJobs", getJobsByStatus);
+  const { data: jobs, mutate: mutateJobs } = useSWR("getJobs", () =>
+    getJobsByStatus()
+  );
 
   const runningJob = useMemo(() => {
     return jobs?.find(
@@ -92,8 +95,8 @@ const Home: NextPage = () => {
                 message: "Trying to start the job...",
               });
 
-              const hasRunningJob = await mutateRunningJob();
-              if (hasRunningJob) {
+              await mutateJobs();
+              if (runningJob) {
                 toast({
                   message: "Job started!!!",
                 });
@@ -130,7 +133,7 @@ const Home: NextPage = () => {
 
         if (hasReadyJob) {
           void getCronTriggered();
-          void mutateRunningJob();
+          void mutateJobs();
 
           setTimeout(() => {
             toast({ message: "Start running new jobs from the jobs list." });
@@ -149,7 +152,6 @@ const Home: NextPage = () => {
       setLive(true);
       if (progressStatus === Status.completed) {
         void mutateJobs();
-        void mutateRunningJob();
         toast({ message: `Complete Job: ${runningJob.videoTitle}.` });
       }
       if (progressStatus === Status.downloading) {
@@ -162,7 +164,7 @@ const Home: NextPage = () => {
     }
 
     setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
-  }, [mutateJobs, mutateRunningJob, progressStatus, runningJob, toast]);
+  }, [mutateJobs, progressStatus, runningJob, toast]);
 
   return (
     <Wrapper>
@@ -186,7 +188,7 @@ const Home: NextPage = () => {
       {!!files?.length && <DownloadFiles files={files} />}
 
       {!!jobs?.length && (
-        <JobsList
+        <JobsTable
           jobs={jobs}
           progressJob={
             runningJob &&
@@ -203,7 +205,7 @@ const Home: NextPage = () => {
               className={`${live ? "btn-error" : "btn-ghost"} btn`}
               onClick={() => void handleLiveButton()}
             >
-              {live ? "Stop" : "Live"}
+              {live ? "Hide live Progress" : "Show live Progress"}
             </button>
           }
         />

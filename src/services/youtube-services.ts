@@ -1,30 +1,17 @@
 import fs from "fs";
 import path from "path";
 import type { Readable } from "stream";
-import ytdl, { type videoFormat } from "ytdl-core";
+import ytdl, { filterFormats } from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
 import ProgressTracker from "~/libs/ProgressTracker";
-import {
-  FormatType,
-  Status,
-  type Format,
-  type ProgressJob,
-  type Video,
-} from "~/typing";
+import { Status, type ProgressJob, type Video } from "~/typing";
+import { createOutputDirectory } from "~/utils/dirHelper";
 import { mergeAudioAndVideo } from "~/utils/mergeAudioVideo";
 import { removeFilesWithExtensions } from "~/utils/removeFilesWithExtensions";
 import { sanitizeFileName } from "~/utils/stringHelper";
 import { AudioFormatMap } from "~/youtubeFormats";
 
-interface ProgressData {
-  progress: number;
-  status: Status;
-}
-type Notifyer = (data: ProgressData) => Promise<void>;
-
-const tracker = new ProgressTracker();
-let processingVideo: Video;
-let processingJob: ProgressJob;
+let tracker: ProgressTracker;
 
 const downloadFile = (stream: Readable, fileName: string) =>
   new Promise<string>((resolve, reject) => {
@@ -34,23 +21,25 @@ const downloadFile = (stream: Readable, fileName: string) =>
     stream.pipe(writeStream);
     writeStream.on("error", (error) => {
       console.error(error);
-      void notifyProgress({ progress: 0, status: Status.error }).then(() =>
-        reject(new Error(`File writing error: ${error.message}`))
-      );
+      void tracker
+        .updateProgress({ status: Status.error })
+        .then(() => reject(new Error(`File writing error: ${error.message}`)));
     });
 
     stream.on("progress", (_, downloaded, total) => {
-      void notifyProgress({
+      void tracker.updateProgress({
         progress: (downloaded / total) * 100,
         status: Status.downloading,
       });
     });
 
     stream.on("end", () => {
-      void notifyProgress({
-        progress: 100,
-        status: Status.completed,
-      }).then(() => resolve(filePath));
+      void tracker
+        .updateProgress({
+          progress: 100,
+          status: Status.completed,
+        })
+        .then(() => resolve(filePath));
     });
   });
 
@@ -58,14 +47,13 @@ export const generateVideo = async (
   selectedVideo: Video,
   selectedJob: ProgressJob
 ) => {
-  processingVideo = selectedVideo;
-  processingJob = selectedJob;
+  tracker = new ProgressTracker(selectedJob._id);
 
   const formatItag = selectedJob.formatItag;
   const { videoDetails, formats } = selectedVideo;
   const { title } = videoDetails;
 
-  console.log(`Job started for video ID: ${processingVideo._id.toString()}`);
+  console.log(`Job started for video ID: ${selectedVideo._id.toString()}`);
   // format has audio and video. Only use it if we don't have matched format.
   const compromiseMatched = formats.find(
     (format) => format.hasAudio && format.hasVideo
@@ -89,9 +77,9 @@ export const generateVideo = async (
   const videoUrl = selectedVideo.videoDetails.video_url;
   const { hasAudio: matchedHasAudio, container: matchedContainer } =
     formatMatched;
-  createOutputDirectory();
+  await createOutputDirectory();
 
-  await notifyProgress({ progress: 0, status: Status.pending });
+  await tracker.updateProgress({ progress: 0, status: Status.pending });
 
   // Process video selected format has no audio.
   if (!matchedHasAudio) {
@@ -135,7 +123,7 @@ export const generateVideo = async (
         videoFilePath,
         audioFilePath,
         outputPath,
-        (data) => void notifyProgress(data)
+        (data) => void tracker.updateProgress(data)
       );
     } catch (error) {
       throw new Error(
@@ -155,52 +143,6 @@ export const generateVideo = async (
   }
   return console.log("Downloaded one file without merging");
 };
-
-// The job is under /api/cron
-const notifyProgress: Notifyer = async ({ progress, status }) => {
-  const roundProgress = Math.round(progress);
-
-  await tracker.updateProgress(processingJob._id, {
-    progress: roundProgress,
-    status,
-  });
-  console.log({ progress: roundProgress, status });
-};
-
-const createOutputDirectory = () => {
-  if (!fs.existsSync(OUTPUT_PATH)) {
-    fs.mkdirSync(OUTPUT_PATH, { recursive: true });
-  }
-};
-
-function getFormatType(format: videoFormat) {
-  if (!format.hasVideo && format.hasAudio) {
-    return FormatType.audioOnly;
-  }
-
-  if (format.hasVideo && !format.hasAudio) {
-    return FormatType.videoOnly;
-  }
-
-  if (format.hasVideo && format.hasAudio) {
-    return FormatType.videoWithAudio;
-  }
-}
-
-function filterFormats(formats: videoFormat[]) {
-  return formats
-    .reduce((acc, format) => {
-      if (format.container !== "mp4") return acc;
-
-      const type = getFormatType(format);
-      if (!type) return acc;
-
-      const updatedFormat = { ...format, type };
-      acc.push(updatedFormat);
-      return acc;
-    }, [] as Format[])
-    .sort((a, b) => a.itag - b.itag);
-}
 
 export const requestInfoFromYoutube = async (url: string) => {
   if (typeof url !== "string") {
