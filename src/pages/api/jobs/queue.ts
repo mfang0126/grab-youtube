@@ -31,7 +31,6 @@ export default async function handler(
     const statusGroup = Array.isArray(status) ? status : [status];
     const statusMatcher = status ? statusGroup : Object.values(Status);
 
-    console.log(statusMatcher);
     const db = await getDb();
     const jobs = await db
       .collection<Job>(Collections.Jobs)

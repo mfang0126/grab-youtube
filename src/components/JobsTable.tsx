@@ -1,4 +1,4 @@
-import { type JobItem } from "~/typing";
+import { Status, type JobItem } from "~/typing";
 import { getQualityByItag } from "~/utils/stringHelper";
 
 interface JobsTableProps {
@@ -34,6 +34,14 @@ export default function JobsTable({
                 <td>{status}</td>
                 <td>
                   <button
+                    disabled={
+                      status &&
+                      [
+                        Status.downloading,
+                        Status.completed,
+                        Status.merging,
+                      ].includes(status)
+                    }
                     className="btn-primary btn-xs btn"
                     onClick={() => onRowDownloadClick?.(_id)}
                   >

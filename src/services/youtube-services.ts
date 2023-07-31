@@ -38,10 +38,7 @@ const downloadFile = (
       });
     });
 
-    stream.on("end", () => {
-      
-        .then(() => resolve(filePath));
-    });
+    stream.on("end", () => resolve(filePath));
   });
 
 export const grabTube = async (
@@ -128,24 +125,46 @@ export const generateVideo = async (
         outputPath,
         (data) => void tracker.updateProgress(data)
       );
+      await removeFilesWithExtensions();
+
+      await tracker.updateProgress({
+        progress: 100,
+        status: Status.completed,
+      });
+
+      console.log("Downloaded one file with merging");
+      return {
+        id: selectedJob._id.toString(),
+        path: outputPath,
+      };
     } catch (error) {
       throw new Error(
         `Error on merging audio and video: ${(error as Error).message}`
       );
     }
-
-    await removeFilesWithExtensions();
-    return console.log("Downloaded one file with merging");
   }
 
   // Process video selected format has audio.
   const filePath = await downloadFile(videoUrl, outputName, {
     quality: formatItag,
   });
-  if (filePath) {
-    return console.log("Downloaded one file without merging");
+
+  if (!filePath) {
+    throw new Error(
+      `${selectedJob._id.toString()} | Error on downloading file.`
+    );
   }
-  return console.log("Downloaded one file without merging");
+
+  await tracker.updateProgress({
+    progress: 100,
+    status: Status.completed,
+  });
+
+  console.log("Downloaded one file without merging");
+  return {
+    id: selectedJob._id.toString(),
+    path: filePath,
+  };
 };
 
 export const requestInfoFromYoutube = async (url: string) => {

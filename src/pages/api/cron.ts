@@ -34,12 +34,15 @@ export default async function handler(
 
   try {
     // should add job id here.
-    await generateVideo(video, job);
+    const { path } = await generateVideo(video, job);
+
+    console.log(`Job: ${job._id.toString()} finished.`);
+    return res.json({
+      id: job._id.toString(),
+      path,
+    });
   } catch (error) {
     console.log(error);
     return res.status(400).json(error);
   }
-
-  console.log(`Job: ${job._id.toString()} finished.`);
-  return res.json(`Job: ${job._id.toString()} finished.`);
 }

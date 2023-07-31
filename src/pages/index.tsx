@@ -58,6 +58,14 @@ const Home: NextPage = () => {
   );
 
   const runningJob = useMemo(() => jobs && findRunningJob(jobs), [jobs]);
+  const otherJobs = useMemo(
+    () =>
+      jobs?.filter(
+        ({ status }) =>
+          status && ![Status.downloading, Status.merging].includes(status)
+      ) ?? [],
+    [jobs]
+  );
 
   const { toast } = useToast();
   const { progress: progressNum, status: progressStatus } = useProgress(
@@ -85,6 +93,13 @@ const Home: NextPage = () => {
     async () => {
       if (selectedFormat?.itag && jobId) {
         await addNewJob(jobId, `${selectedFormat.itag}`);
+
+        if (runningJob) {
+          toast({
+            message: "Add job to the list...",
+          });
+          return;
+        }
         await mutateJobs();
 
         void getCronTriggered();
@@ -203,9 +218,9 @@ const Home: NextPage = () => {
 
       {!!files?.length && <DownloadFiles files={files} />}
 
-      {!!jobs?.length && (
+      {!!otherJobs?.length && (
         <JobsSection
-          jobs={jobs}
+          jobs={otherJobs}
           action={
             <button
               className={`${live ? "btn-error" : "btn-ghost"} btn`}
@@ -216,12 +231,20 @@ const Home: NextPage = () => {
           }
           progressSection={
             runningJob && (
-              <JobsTable jobs={[{ ...runningJob, progress: progressNum }]} />
+              <JobsTable
+                jobs={[
+                  {
+                    ...runningJob,
+                    progress: progressNum,
+                    status: progressStatus,
+                  },
+                ]}
+              />
             )
           }
           jobsSection={
             <JobsTable
-              jobs={jobs}
+              jobs={otherJobs}
               onRowDownloadClick={handleRowDownloadClick}
             />
           }

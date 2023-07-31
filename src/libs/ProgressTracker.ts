@@ -45,7 +45,7 @@ export default class ProgressTracker {
 
       this._progressCache.push({
         progress: this._currentProgress,
-        status: this._currentProgress === 100 ? Status.completed : status,
+        status,
       });
 
       if (this._progressCache.length >= 10 || progress === 100) {
