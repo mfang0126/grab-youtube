@@ -1,10 +1,10 @@
 import React, { type FC, type ChangeEvent } from "react";
-import { type Format } from "~/typing";
+import type { videoFormat } from "ytdl-core";
 
 export interface FormatsButtonGroupProps {
-  options: Format[];
-  value: Format | null;
-  onChange: (value: Format) => void;
+  options: videoFormat[];
+  value: videoFormat | null;
+  onChange: (value: videoFormat) => void;
 }
 
 const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({

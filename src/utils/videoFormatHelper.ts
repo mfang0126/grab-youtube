@@ -1,5 +1,5 @@
 import type { videoFormat } from "ytdl-core";
-import { FormatType, type Format } from "~/typing";
+import { FormatType } from "~/typing";
 
 export function getFormatType(format: videoFormat) {
   if (!format.hasVideo && format.hasAudio) {
@@ -26,6 +26,6 @@ export function filterFormats(formats: videoFormat[]) {
       const updatedFormat = { ...format, type };
       acc.push(updatedFormat);
       return acc;
-    }, [] as Format[])
+    }, [] as videoFormat[])
     .sort((a, b) => a.itag - b.itag);
 }

@@ -3,6 +3,7 @@
 import type { NextPage } from "next";
 import { useEffect, useMemo, useState, type ChangeEventHandler } from "react";
 import useSWR from "swr";
+import type { videoFormat } from "ytdl-core";
 import DownloadFiles from "~/components/DownloadFilesList";
 import { type FormatsButtonGroupProps } from "~/components/FormatsButtonGroup";
 import FormatSelection, {
@@ -25,7 +26,6 @@ import {
 } from "~/services/api-service";
 import {
   Status,
-  type Format,
   type VideoItem,
   type DownloadFile,
   type JobItem,
@@ -42,9 +42,11 @@ const findRunningJob = (jobs: JobItem[]) => {
 const Home: NextPage = () => {
   const [url, setUrl] = useState("");
   const [live, setLive] = useState(false);
-  const [options, setOptions] = useState<Format[]>([]);
+  const [options, setOptions] = useState<videoFormat[]>([]);
   const [jobId, setJobId] = useState("");
-  const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<videoFormat | null>(
+    null
+  );
 
   const {
     error: errorVideo,

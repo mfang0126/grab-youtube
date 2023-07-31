@@ -24,7 +24,7 @@ export interface VideoItem {
   _id: string;
   youtubeVideoId: string;
   videoDetails: MoreVideoDetails;
-  formats: Format[];
+  formats: videoFormat[];
 }
 
 export interface Video extends Omit<VideoItem, "_id"> {
@@ -54,15 +54,3 @@ export interface DownloadFile {
   name: string;
   path: string;
 }
-
-export type Format = Pick<
-  videoFormat,
-  | "itag"
-  | "quality"
-  | "qualityLabel"
-  | "container"
-  | "contentLength"
-  | "hasAudio"
-  | "hasVideo"
-  | "mimeType"
-> & { type: FormatType };

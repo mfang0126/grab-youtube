@@ -1,13 +1,13 @@
-import type { Format } from "~/typing";
 import FormatsButtonGroup, {
   type FormatsButtonGroupProps,
 } from "./FormatsButtonGroup";
 import Heading from "./Heading";
 import type { MouseEvent } from "react";
+import type { videoFormat } from "ytdl-core";
 
 export interface FormatSelectionProps {
-  options: Format[];
-  value: Format | null;
+  options: videoFormat[];
+  value: videoFormat | null;
   onChange: FormatsButtonGroupProps["onChange"];
   onDownloadClick: (event: MouseEvent<HTMLButtonElement>) => Promise<void>;
 }
