@@ -1,62 +1,44 @@
-import { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import type { DownloadFile, JobItem, Status, VideoItem } from "~/typing";
 
-interface EventSourceMessage {
-  progress?: number;
-  filePath?: string;
-  status: "downloading" | "completed";
-}
+export const getFiles = (url: string) =>
+  axios.get<DownloadFile[]>(url).then((res) => res.data);
 
-const useEventSource = (downloadUrl: string) => {
-  const eventSource = useRef<EventSource | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [filePath, setFielPath] = useState<string>();
-  const [isLoading, setIsLoading] = useState(false);
+export const getVideo = (url: string) =>
+  axios.post<VideoItem>("/api/video", { url }).then((res) => res.data);
 
-  useEffect(() => {
-    if (!downloadUrl) {
+export const addNewJob = (id: string, format: string) =>
+  axios
+    .post<DownloadFile[]>("/api/jobs/queue", { id, format })
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error(err);
+      return [];
+    });
+
+export const getJobsByStatus = (status?: Status[]) =>
+  axios
+    .get<JobItem[]>("/api/jobs/queue", { params: { status } })
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error(err);
+      return [] as JobItem[];
+    });
+
+export const getCronTriggered = () =>
+  axios
+    .get<JobItem[]>("/api/cron")
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error(err);
+      return [] as JobItem[];
+    });
+
+export const startDownloadJob = (id: string) =>
+  axios
+    .post<DownloadFile[]>(`/api/jobs/${id}/start`)
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error(err);
       return;
-    }
-
-    const getProgress = () => {
-      try {
-        setIsLoading(true);
-        if (!eventSource.current) {
-          eventSource.current = new EventSource(
-            `/api/download?url=${downloadUrl}`
-          );
-        }
-
-        // Handle incoming messages
-        eventSource.current.onmessage = (event: MessageEvent<string>) => {
-          let data: EventSourceMessage;
-          try {
-            data = JSON.parse(event.data) as EventSourceMessage;
-          } catch (e) {
-            console.error("Error parsing event data:", e);
-            return;
-          }
-
-          if (data.progress) {
-            setProgress(data.progress);
-          }
-
-          if (data.status === "completed") {
-            setFielPath(data.filePath);
-            setIsLoading(false);
-            eventSource.current?.close();
-          }
-        };
-      } catch (e) {
-        // Log any errors
-        console.error("Error in useEventSource:", e);
-        setIsLoading(false);
-      }
-    };
-
-    void getProgress();
-  }, [downloadUrl]);
-
-  return { progress, filePath, isLoading };
-};
-
-export default useEventSource;
+    });

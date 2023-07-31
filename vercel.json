@@ -2,5 +2,10 @@
   "buildCommand": "yarn build",
   "outputDirectory": "dist",
   "devCommand": "yarn dev",
-  "installCommand": "yarn"
+  "installCommand": "yarn",
+  "git": {
+    "deploymentEnabled": {
+      "docker-v2": false
+    }
+  }
 }
