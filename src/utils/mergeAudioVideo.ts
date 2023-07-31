@@ -23,6 +23,7 @@ export const mergeAudioAndVideo = (
   outputFile: string,
   notifyProgress: Notifyer
 ): Promise<void> => {
+  console.log("Start merging audio and video...");
   return new Promise((resolve, reject) => {
     ffmpeg()
       .input(videoInput)

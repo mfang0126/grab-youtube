@@ -28,8 +28,12 @@ export default class ProgressTracker {
     progress,
     status,
   }: Omit<ProgressTrackerData, "id">): Promise<void> {
+    if (!progress && !status) {
+      throw new Error("Cannot track progress without progress or status.");
+    }
+
     if (status && typeof progress !== "number") {
-      this._progressCache.push({ progress, status });
+      this._progressCache.push({ progress: this._currentProgress, status });
       return;
     }
 
@@ -40,8 +44,8 @@ export default class ProgressTracker {
       }
 
       this._progressCache.push({
-        progress,
-        status: progress === 100 ? Status.completed : status,
+        progress: this._currentProgress,
+        status: this._currentProgress === 100 ? Status.completed : status,
       });
 
       if (this._progressCache.length >= 10 || progress === 100) {
@@ -49,8 +53,16 @@ export default class ProgressTracker {
         return;
       }
     }
+  }
 
-    throw new Error("Cannot track progress without progress or status.");
+  async resetProgress(): Promise<void> {
+    this._currentProgress = 0;
+    this._progressCache = [];
+
+    const db = await getDb();
+    await db
+      .collection<ProgressJob>(Collections.Jobs)
+      .updateOne({ _id: this._id }, { $set: { progress: 0 } });
   }
 
   /**
@@ -67,7 +79,13 @@ export default class ProgressTracker {
         return {
           updateOne: {
             filter: { _id: this._id },
-            update: { $set: { progress: p.progress, status: p.status } },
+            update: {
+              $set: {
+                progress: p.progress,
+                status: p.status,
+                updatedAt: new Date(),
+              },
+            },
           },
         };
       })

@@ -1,29 +1,43 @@
 "use client";
 
 import type { NextPage } from "next";
-import { useEffect, useState, type ChangeEventHandler, useMemo } from "react";
+import { useEffect, useMemo, useState, type ChangeEventHandler } from "react";
 import useSWR from "swr";
 import DownloadFiles from "~/components/DownloadFilesList";
 import { type FormatsButtonGroupProps } from "~/components/FormatsButtonGroup";
 import FormatSelection, {
   type FormatSelectionProps,
 } from "~/components/FormatsSelection";
-import JobsList from "~/components/JobsList";
+import JobsSection from "~/components/JobsSection";
 import JobsTable from "~/components/JobsTable";
-import { ProgressJob } from "~/components/ProgressJob";
 import Title from "~/components/Title";
 import UrlInput, { type UrlInputProps } from "~/components/UrlInput";
 import Wrapper from "~/components/Wrapper";
 import useProgress from "~/hooks/useProgress";
 import useToast from "~/hooks/useToast";
 import {
-  getJobsByStatus,
   getCronTriggered,
-  getFilePaths,
+  getFiles,
+  getJobsByStatus,
   getVideo,
-  sendJobToQueue,
+  addNewJob,
+  startDownloadJob,
 } from "~/services/api-service";
-import { Status, type Format } from "~/typing";
+import {
+  Status,
+  type Format,
+  type VideoItem,
+  type DownloadFile,
+  type JobItem,
+} from "~/typing";
+import { cleanJobId } from "~/utils/stringHelper";
+
+const findRunningJob = (jobs: JobItem[]) => {
+  return jobs?.find(
+    ({ status }) =>
+      status && [Status.downloading, Status.merging].includes(status)
+  );
+};
 
 const Home: NextPage = () => {
   const [url, setUrl] = useState("");
@@ -32,27 +46,18 @@ const Home: NextPage = () => {
   const [jobId, setJobId] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
 
-  const { data: files } = useSWR("/files-path", getFilePaths);
-  const { data: jobs, mutate: mutateJobs } = useSWR("getJobs", () =>
-    getJobsByStatus()
+  const {
+    error: errorVideo,
+    mutate: mutateVideo,
+    isValidating: isGrabbing,
+  } = useSWR<VideoItem, Error>(url, getVideo);
+  const { data: files } = useSWR<DownloadFile[], Error>("/api/files", getFiles);
+  const { data: jobs, mutate: mutateJobs } = useSWR<JobItem[], Error>(
+    "all",
+    () => getJobsByStatus()
   );
 
-  const runningJob = useMemo(() => {
-    return jobs?.find(
-      ({ status }) =>
-        status && [Status.downloading, Status.merging].includes(status)
-    );
-  }, [jobs]);
-
-  const { isLoading: isGrabbing, mutate: mutateVideo } = useSWR(
-    "getVideoInfo",
-    async () => {
-      if (url) {
-        const videos = await getVideo(url);
-        return videos;
-      }
-    }
-  );
+  const runningJob = useMemo(() => jobs && findRunningJob(jobs), [jobs]);
 
   const { toast } = useToast();
   const { progress: progressNum, status: progressStatus } = useProgress(
@@ -61,8 +66,9 @@ const Home: NextPage = () => {
   );
 
   const handleGrabClick: UrlInputProps["onGrabButtonClick"] = async () => {
-    setOptions([]);
     const newVideos = await mutateVideo();
+    setOptions([]);
+
     if (newVideos) {
       setOptions(newVideos.formats);
       setJobId(newVideos._id.toString());
@@ -78,37 +84,36 @@ const Home: NextPage = () => {
   const handleDownloadClick: FormatSelectionProps["onDownloadClick"] =
     async () => {
       if (selectedFormat?.itag && jobId) {
-        await sendJobToQueue(jobId, `${selectedFormat.itag}`);
+        await addNewJob(jobId, `${selectedFormat.itag}`);
         await mutateJobs();
-
-        toast({
-          message: "The job will be started in 3 seconds",
-          autoHideDuration: 3000,
-        });
 
         void getCronTriggered();
 
-        setTimeout(() => {
-          const retry = setInterval(() => {
-            void (async () => {
-              toast({
-                message: "Trying to start the job...",
-              });
+        const retry = setInterval(() => {
+          void (async () => {
+            toast({
+              message: "Trying to start the job...",
+            });
 
-              await mutateJobs();
-              if (runningJob) {
+            const newJobs = await mutateJobs();
+            if (newJobs) {
+              const newRunningJob = findRunningJob(newJobs);
+              if (newRunningJob) {
+                setLive(true);
                 toast({
-                  message: "Job started!!!",
+                  message: `Found a running job with id ${cleanJobId(
+                    newRunningJob._id
+                  )}.`,
                 });
                 clearInterval(retry);
-                setLive(true);
               }
-            })();
-          }, 1500);
-        }, 1500);
+            }
+          })();
+        }, 1000);
       }
     };
 
+  // Don't know if it's useful.
   const handleLiveButton = async () => {
     if (runningJob) {
       setLive(true);
@@ -146,7 +151,11 @@ const Home: NextPage = () => {
     setLive(!live);
   };
 
-  // TODO: Remove once finish testing.
+  const handleRowDownloadClick = (id: string) => {
+    void startDownloadJob(id);
+    toast({ message: `Job ${id.substring(0, 8)}: Download started.` });
+  };
+
   useEffect(() => {
     if (runningJob) {
       setLive(true);
@@ -163,8 +172,15 @@ const Home: NextPage = () => {
       setLive(false);
     }
 
+    // TODO: Remove once finish testing.
     setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
   }, [mutateJobs, progressStatus, runningJob, toast]);
+
+  useEffect(() => {
+    if (errorVideo) {
+      toast({ message: "Error on fetching video formats." });
+    }
+  }, [toast, errorVideo]);
 
   return (
     <Wrapper>
@@ -188,18 +204,8 @@ const Home: NextPage = () => {
       {!!files?.length && <DownloadFiles files={files} />}
 
       {!!jobs?.length && (
-        <JobsTable
+        <JobsSection
           jobs={jobs}
-          progressJob={
-            runningJob &&
-            live && (
-              <ProgressJob
-                progress={progressNum}
-                quality={runningJob.videoQuality}
-                title={runningJob.videoTitle}
-              />
-            )
-          }
           action={
             <button
               className={`${live ? "btn-error" : "btn-ghost"} btn`}
@@ -207,6 +213,17 @@ const Home: NextPage = () => {
             >
               {live ? "Hide live Progress" : "Show live Progress"}
             </button>
+          }
+          progressSection={
+            runningJob && (
+              <JobsTable jobs={[{ ...runningJob, progress: progressNum }]} />
+            )
+          }
+          jobsSection={
+            <JobsTable
+              jobs={jobs}
+              onRowDownloadClick={handleRowDownloadClick}
+            />
           }
         />
       )}

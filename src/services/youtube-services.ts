@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { Readable } from "stream";
-import ytdl, { filterFormats } from "ytdl-core";
+import ytdl, { filterFormats, type downloadOptions } from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
 import ProgressTracker from "~/libs/ProgressTracker";
 import { Status, type ProgressJob, type Video } from "~/typing";
@@ -13,12 +12,18 @@ import { AudioFormatMap } from "~/youtubeFormats";
 
 let tracker: ProgressTracker;
 
-const downloadFile = (stream: Readable, fileName: string) =>
+const downloadFile = (
+  url: string,
+  name: string,
+  downloadOption: downloadOptions
+) =>
   new Promise<string>((resolve, reject) => {
-    const filePath = path.join(OUTPUT_PATH, fileName);
-
+    const stream = ytdl(url, downloadOption);
+    const filePath = path.join(OUTPUT_PATH, name);
     const writeStream = fs.createWriteStream(filePath);
+
     stream.pipe(writeStream);
+
     writeStream.on("error", (error) => {
       console.error(error);
       void tracker
@@ -34,14 +39,19 @@ const downloadFile = (stream: Readable, fileName: string) =>
     });
 
     stream.on("end", () => {
-      void tracker
-        .updateProgress({
-          progress: 100,
-          status: Status.completed,
-        })
+      
         .then(() => resolve(filePath));
     });
   });
+
+export const grabTube = async (
+  url: string,
+  downloadOption: downloadOptions
+) => {
+  return new Promise((resolve, reject) =>
+    ytdl(url, downloadOption).on("end", resolve).on("error", reject)
+  );
+};
 
 export const generateVideo = async (
   selectedVideo: Video,
@@ -95,22 +105,14 @@ export const generateVideo = async (
     console.log("MATCHED AUDIO FORMAT: ", matchedAudioFormat.mimeType);
 
     try {
-      const { itag: matchedAudioFormatItag } = matchedAudioFormat;
-      const audioStream = ytdl(videoUrl, {
-        quality: matchedAudioFormatItag,
-      }).on("error", (error) => {
-        throw new Error(`Audio stream error: ${error.message}`);
-      });
-      const videoStream = ytdl(videoUrl, { quality: formatItag }).on(
-        "error",
-        (error) => {
-          throw new Error(`Video stream error: ${error.message}`);
-        }
-      );
+      const { itag: matchedAudioItag } = matchedAudioFormat;
 
-      // Memory might be funny from here.
-      const audioFilePath = await downloadFile(audioStream, audioName);
-      const videoFilePath = await downloadFile(videoStream, videoName);
+      const audioFilePath = await downloadFile(videoUrl, audioName, {
+        quality: matchedAudioItag,
+      });
+      const videoFilePath = await downloadFile(videoUrl, videoName, {
+        quality: formatItag,
+      });
 
       const outputPath = path.join(OUTPUT_PATH, outputName);
       const writeStream = fs.createWriteStream(outputPath);
@@ -119,6 +121,7 @@ export const generateVideo = async (
         throw new Error(`File writing error: ${error.message}`);
       });
 
+      await tracker.resetProgress();
       await mergeAudioAndVideo(
         videoFilePath,
         audioFilePath,
@@ -136,8 +139,9 @@ export const generateVideo = async (
   }
 
   // Process video selected format has audio.
-  const video = ytdl(videoUrl, { quality: formatItag });
-  const filePath = await downloadFile(video, outputName);
+  const filePath = await downloadFile(videoUrl, outputName, {
+    quality: formatItag,
+  });
   if (filePath) {
     return console.log("Downloaded one file without merging");
   }

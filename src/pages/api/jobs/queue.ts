@@ -9,17 +9,13 @@ interface Job extends Omit<JobItem, "_id"> {
   _id: ObjectId;
 }
 
-/**
- * id is videoId
- */
+// id is videoId
 interface QueueJobPayload {
   id: string;
   format: string;
 }
 
-/**
- * id is videoId
- */
+// id is videoId
 interface UpdateJobPayload {
   id: string;
   status: string;

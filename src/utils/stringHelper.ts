@@ -1,3 +1,4 @@
+import type { ObjectId } from "mongodb";
 import { Status } from "~/typing";
 import { VideoFormatMap } from "~/youtubeFormats";
 
@@ -46,4 +47,10 @@ export const getQualityByItag = (itag?: number) => {
     return "N/A";
   }
   return VideoFormatMap[itag]?.resolution ?? "N/A";
+};
+
+export const cleanJobId = (id: string | ObjectId) => {
+  return typeof id === "string"
+    ? id.substring(0, 8)
+    : id.toString().substring(0, 8);
 };
