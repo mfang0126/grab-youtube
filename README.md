@@ -1,6 +1,6 @@
 # Grab your Youtube
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+It's a learning repo... If you found a copyright issue, and I can remove it.
 
 ## Existing bugs
 
