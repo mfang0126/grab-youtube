@@ -5,18 +5,14 @@ import { requestInfoFromYoutube } from "~/services/youtube-services";
 import type { Video } from "~/typing";
 import { getYouTubeVideoId } from "~/utils/stringHelper";
 
-interface VideoPayload {
-  url: string;
-}
-
 // Grab video data by youtube url.
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { url } = req.body as VideoPayload;
-  if (!url) {
-    throw { code: 400 };
+  const { url } = req.query;
+  if (typeof url !== "string") {
+    throw new Error("Required parameters are missing.");
   }
 
   const youtubeVideoId = getYouTubeVideoId(url);
@@ -26,7 +22,7 @@ export default async function handler(
     // Get job data by youtubeVideoId
     const job = await db
       .collection<Video>(Collections.Videos)
-      .findOne({ videoId: youtubeVideoId });
+      .findOne({ youtubeVideoId: youtubeVideoId });
 
     if (job?._id) {
       console.log(`${youtubeVideoId} - Found video data in database.`);
@@ -48,7 +44,7 @@ export default async function handler(
   const { value } = await db
     .collection<Video>(Collections.Videos)
     .findOneAndUpdate(
-      { videoId: grabbedInfo.youtubeVideoId },
+      { youtubeVideoId: grabbedInfo.youtubeVideoId },
       { $set: grabbedInfo },
       { upsert: true, returnDocument: "after" }
     );

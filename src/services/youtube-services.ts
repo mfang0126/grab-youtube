@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import ytdl, { filterFormats, type downloadOptions } from "ytdl-core";
+import ytdl, { type downloadOptions } from "ytdl-core";
 import { OUTPUT_PATH } from "~/config";
 import ProgressTracker from "~/libs/ProgressTracker";
 import { Status, type ProgressJob, type Video } from "~/typing";
@@ -8,6 +8,7 @@ import { createOutputDirectory } from "~/utils/dirHelper";
 import { mergeAudioAndVideo } from "~/utils/mergeAudioVideo";
 import { removeFilesWithExtensions } from "~/utils/removeFilesWithExtensions";
 import { sanitizeFileName } from "~/utils/stringHelper";
+import { filterFormats } from "~/utils/videoFormatHelper";
 import { AudioFormatMap } from "~/youtubeFormats";
 
 let tracker: ProgressTracker;
@@ -166,17 +167,13 @@ export const requestInfoFromYoutube = async (url: string) => {
     throw new Error("Required parameters are missing.");
   }
 
-  try {
-    const { videoDetails, formats } = await ytdl.getInfo(url);
-    const { videoId } = videoDetails;
+  const { videoDetails, formats } = await ytdl.getInfo(url);
+  const { videoId } = videoDetails;
 
-    const filteredFormats = filterFormats(formats);
-    return {
-      youtubeVideoId: videoId,
-      videoDetails,
-      formats: filteredFormats,
-    };
-  } catch (error) {
-    console.error(`Error on requesting video info from YouTube: `, error);
-  }
+  const filteredFormats = filterFormats(formats);
+  return {
+    youtubeVideoId: videoId,
+    videoDetails,
+    formats: filteredFormats,
+  };
 };

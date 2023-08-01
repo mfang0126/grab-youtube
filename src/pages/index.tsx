@@ -32,13 +32,6 @@ import {
 } from "~/typing";
 import { cleanJobId } from "~/utils/stringHelper";
 
-const findRunningJob = (jobs: JobItem[]) => {
-  return jobs?.find(
-    ({ status }) =>
-      status && [Status.downloading, Status.merging].includes(status)
-  );
-};
-
 const Home: NextPage = () => {
   const [url, setUrl] = useState("");
   const [live, setLive] = useState(false);
@@ -53,15 +46,23 @@ const Home: NextPage = () => {
     mutate: mutateVideo,
     isValidating: isGrabbing,
   } = useSWR<VideoItem, Error>(url, getVideo);
-  const { data: files, mutate: mutateFiles } = useSWR<DownloadFile[], Error>(
-    "/api/files",
-    getFiles
+  const {
+    data: files,
+    mutate: mutateFiles,
+    error: errorFiles,
+  } = useSWR<DownloadFile[], Error>("/api/files", getFiles);
+  const {
+    data: jobs,
+    mutate: mutateJobs,
+    error: errorJobs,
+  } = useSWR<JobItem[], Error>([Status.completed, Status.ready], () =>
+    getJobsByStatus()
   );
-  const { data: jobs, mutate: mutateJobs } = useSWR<JobItem[], Error>(
-    [Status.completed, Status.ready],
-    () => getJobsByStatus()
-  );
-  const { data: runningJob, mutate: mutateRunningJob } = useSWR(
+  const {
+    data: runningJob,
+    mutate: mutateRunningJob,
+    error: errorRunningJob,
+  } = useSWR<JobItem | undefined, Error>(
     [Status.downloading, Status.merging],
     async (status: Status[]) => {
       const jobs = await getJobsByStatus(status);
@@ -181,6 +182,7 @@ const Home: NextPage = () => {
     toast({ message: `Job ${id.substring(0, 8)}: Download started.` });
   };
 
+  // TODO: Move to custom hook.
   useEffect(() => {
     if (runningJob) {
       setLive(true);
@@ -210,11 +212,21 @@ const Home: NextPage = () => {
     toast,
   ]);
 
+  // TODO: Move to custom hook.
   useEffect(() => {
     if (errorVideo) {
       toast({ message: "Error on fetching video formats." });
     }
-  }, [toast, errorVideo]);
+    if (errorFiles) {
+      toast({ message: "Error on file list." });
+    }
+    if (errorRunningJob) {
+      toast({ message: "Error on fetching running jobs list." });
+    }
+    if (errorJobs) {
+      toast({ message: "Error on fetching jobs list." });
+    }
+  }, [toast, errorVideo, errorFiles, errorRunningJob, errorJobs]);
 
   return (
     <Wrapper>

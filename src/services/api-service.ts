@@ -5,7 +5,9 @@ export const getFiles = (url: string) =>
   axios.get<DownloadFile[]>(url).then((res) => res.data);
 
 export const getVideo = (url: string) =>
-  axios.post<VideoItem>("/api/video", { url }).then((res) => res.data);
+  axios
+    .get<VideoItem>("/api/video", { params: { url } })
+    .then((res) => res.data);
 
 export const addNewJob = (id: string, format: string) =>
   axios
