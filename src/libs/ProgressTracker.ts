@@ -48,8 +48,9 @@ export default class ProgressTracker {
         status,
       });
 
-      if (this._progressCache.length >= 10 || progress === 100) {
+      if (this._progressCache.length >= 10) {
         await this.saveProgressBatch();
+        console.log(`Progress: ${this._currentProgress} | Status: ${status}`);
         return;
       }
     }
@@ -63,6 +64,19 @@ export default class ProgressTracker {
     await db
       .collection<ProgressJob>(Collections.Jobs)
       .updateOne({ _id: this._id }, { $set: { progress: 0 } });
+  }
+
+  async completedProgress(): Promise<void> {
+    this._currentProgress = 100;
+    this._progressCache = [];
+
+    const db = await getDb();
+    await db
+      .collection<ProgressJob>(Collections.Jobs)
+      .updateOne(
+        { _id: this._id },
+        { $set: { progress: 100, status: Status.completed } }
+      );
   }
 
   /**

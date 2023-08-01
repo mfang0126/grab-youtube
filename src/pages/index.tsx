@@ -53,13 +53,24 @@ const Home: NextPage = () => {
     mutate: mutateVideo,
     isValidating: isGrabbing,
   } = useSWR<VideoItem, Error>(url, getVideo);
-  const { data: files } = useSWR<DownloadFile[], Error>("/api/files", getFiles);
+  const { data: files, mutate: mutateFiles } = useSWR<DownloadFile[], Error>(
+    "/api/files",
+    getFiles
+  );
   const { data: jobs, mutate: mutateJobs } = useSWR<JobItem[], Error>(
-    "all",
+    [Status.completed, Status.ready],
     () => getJobsByStatus()
   );
+  const { data: runningJob, mutate: mutateRunningJob } = useSWR(
+    [Status.downloading, Status.merging],
+    async (status: Status[]) => {
+      const jobs = await getJobsByStatus(status);
+      return jobs.find(
+        ({ status: jobStatus }) => jobStatus && status.includes(jobStatus)
+      );
+    }
+  );
 
-  const runningJob = useMemo(() => jobs && findRunningJob(jobs), [jobs]);
   const otherJobs = useMemo(
     () =>
       jobs?.filter(
@@ -112,21 +123,18 @@ const Home: NextPage = () => {
               message: "Trying to start the job...",
             });
 
-            const newJobs = await mutateJobs();
-            if (newJobs) {
-              const newRunningJob = findRunningJob(newJobs);
-              if (newRunningJob) {
-                setLive(true);
-                toast({
-                  message: `Found a running job with id ${cleanJobId(
-                    newRunningJob._id
-                  )}.`,
-                });
-                clearInterval(retry);
-              }
+            const newRunningJob = await mutateRunningJob();
+            if (newRunningJob) {
+              setLive(true);
+              toast({
+                message: `Found a running job with id ${cleanJobId(
+                  newRunningJob._id
+                )}.`,
+              });
+              clearInterval(retry);
             }
           })();
-        }, 1000);
+        }, 5000);
       }
     };
 
@@ -178,6 +186,10 @@ const Home: NextPage = () => {
       setLive(true);
       if (progressStatus === Status.completed) {
         void mutateJobs();
+        void mutateFiles();
+
+        setLive(false); // Remove this line once we support continue downloading in the background.
+
         toast({ message: `Complete Job: ${runningJob.videoTitle}.` });
       }
       if (progressStatus === Status.downloading) {
@@ -191,7 +203,7 @@ const Home: NextPage = () => {
 
     // TODO: Remove once finish testing.
     setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
-  }, [mutateJobs, progressStatus, runningJob, toast]);
+  }, [mutateFiles, mutateJobs, progressStatus, runningJob, toast]);
 
   useEffect(() => {
     if (errorVideo) {

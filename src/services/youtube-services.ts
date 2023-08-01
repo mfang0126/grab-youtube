@@ -127,12 +127,9 @@ export const generateVideo = async (
       );
       await removeFilesWithExtensions();
 
-      await tracker.updateProgress({
-        progress: 100,
-        status: Status.completed,
-      });
-
+      await tracker.completedProgress();
       console.log("Downloaded one file with merging");
+
       return {
         id: selectedJob._id.toString(),
         path: outputPath,
@@ -155,12 +152,9 @@ export const generateVideo = async (
     );
   }
 
-  await tracker.updateProgress({
-    progress: 100,
-    status: Status.completed,
-  });
-
+  await tracker.completedProgress();
   console.log("Downloaded one file without merging");
+
   return {
     id: selectedJob._id.toString(),
     path: filePath,
