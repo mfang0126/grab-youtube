@@ -201,8 +201,6 @@ const Home: NextPage = () => {
     if (progressStatus === Status.completed && !runningJob) {
       setLive(false);
     }
-
-    setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
   }, [
     mutateFiles,
     mutateJobs,
