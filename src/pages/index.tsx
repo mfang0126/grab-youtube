@@ -186,6 +186,7 @@ const Home: NextPage = () => {
       setLive(true);
       if (progressStatus === Status.completed) {
         void mutateJobs();
+        void mutateRunningJob();
         void mutateFiles();
 
         setLive(false); // Remove this line once we support continue downloading in the background.
@@ -201,9 +202,15 @@ const Home: NextPage = () => {
       setLive(false);
     }
 
-    // TODO: Remove once finish testing.
     setUrl("https://www.youtube.com/watch?v=veV2I-NEjaM");
-  }, [mutateFiles, mutateJobs, progressStatus, runningJob, toast]);
+  }, [
+    mutateFiles,
+    mutateJobs,
+    mutateRunningJob,
+    progressStatus,
+    runningJob,
+    toast,
+  ]);
 
   useEffect(() => {
     if (errorVideo) {
