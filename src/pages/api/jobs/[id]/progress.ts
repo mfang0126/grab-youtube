@@ -39,7 +39,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
       res.write(`data: ${JSON.stringify({ progress, status })} \n\n`);
     })();
-  }, 1000);
+  }, 3000);
 
   // Keep alive for EventSource
   res.writeHead(200, {

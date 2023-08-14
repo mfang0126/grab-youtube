@@ -29,41 +29,49 @@ export default class ProgressTracker {
     status,
   }: Omit<ProgressTrackerData, "id">): Promise<void> {
     if (!progress && !status) {
-      throw new Error("Cannot track progress without progress or status.");
+      throw new Error("Cannot update progress without progress or status.");
     }
 
-    if (status && typeof progress !== "number") {
+    if (status && !progress) {
       this._progressCache.push({ progress: this._currentProgress, status });
       return;
     }
 
     if (typeof progress === "number" && status) {
-      if (progress > this._currentProgress) {
-        const roundProgress = Math.round(progress);
+      const roundProgress = Math.round(progress);
+
+      if (roundProgress > this._currentProgress) {
         this._currentProgress = roundProgress;
+        this._progressCache.push({
+          progress: this._currentProgress,
+          status,
+        });
       }
+    }
 
-      this._progressCache.push({
-        progress: this._currentProgress,
-        status,
-      });
-
-      if (this._progressCache.length >= 10) {
-        await this.saveProgressBatch();
-        console.log(`Progress: ${this._currentProgress} | Status: ${status}`);
-        return;
-      }
+    if (this._progressCache.length >= 10) {
+      await this.saveProgressBatch();
+      console.log(`Progress: ${this._currentProgress} | Status: ${status}`);
+      return;
     }
   }
 
-  async resetProgress(): Promise<void> {
+  async resetProgress(status?: Status): Promise<void> {
     this._currentProgress = 0;
     this._progressCache = [];
 
     const db = await getDb();
-    await db
+    const { value } = await db
       .collection<ProgressJob>(Collections.Jobs)
-      .updateOne({ _id: this._id }, { $set: { progress: 0 } });
+      .findOneAndUpdate(
+        { _id: this._id },
+        { $set: { progress: 0, status } },
+        { returnDocument: "after" }
+      );
+
+    if (value?._id) {
+      console.log(JSON.stringify(value));
+    }
   }
 
   async completedProgress(): Promise<void> {
@@ -71,12 +79,17 @@ export default class ProgressTracker {
     this._progressCache = [];
 
     const db = await getDb();
-    await db
+    const { value } = await db
       .collection<ProgressJob>(Collections.Jobs)
-      .updateOne(
+      .findOneAndUpdate(
         { _id: this._id },
-        { $set: { progress: 100, status: Status.completed } }
+        { $set: { progress: 100, status: Status.completed } },
+        { returnDocument: "after" }
       );
+
+    if (value?._id) {
+      console.log(JSON.stringify(value));
+    }
   }
 
   /**

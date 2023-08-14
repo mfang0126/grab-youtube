@@ -37,15 +37,19 @@ export async function listFileNameInDir(
     });
 
     const fileStats = await Promise.all(fileStatsPromises);
-
     fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 
-    const latestThreeFiles = fileStats
-      .filter((stats) => stats.file.includes(".mp4"))
-      .slice(0, 3)
+    const latestTenFiles = fileStats
+      .filter(
+        (stats) =>
+          stats.file.includes(".mp4") &&
+          !stats.file.includes("video.mp4") &&
+          !stats.file.includes("audio.mp4")
+      )
+      .slice(0, 10)
       .map((stats) => stats.file);
 
-    return latestThreeFiles;
+    return latestTenFiles;
   } catch (error) {
     console.error("An error occurred while reading the directory:", error);
     return [];

@@ -42,15 +42,6 @@ const downloadFile = (
     stream.on("end", () => resolve(filePath));
   });
 
-export const grabTube = async (
-  url: string,
-  downloadOption: downloadOptions
-) => {
-  return new Promise((resolve, reject) =>
-    ytdl(url, downloadOption).on("end", resolve).on("error", reject)
-  );
-};
-
 export const generateVideo = async (
   selectedVideo: Video,
   selectedJob: ProgressJob
@@ -87,8 +78,6 @@ export const generateVideo = async (
     formatMatched;
   await createOutputDirectory();
 
-  await tracker.updateProgress({ progress: 0, status: Status.pending });
-
   // Process video selected format has no audio.
   if (!matchedHasAudio) {
     const matchedAudioFormat = formats.find(
@@ -119,7 +108,7 @@ export const generateVideo = async (
         throw new Error(`File writing error: ${error.message}`);
       });
 
-      await tracker.resetProgress();
+      await tracker.resetProgress(Status.merging);
       await mergeAudioAndVideo(
         videoFilePath,
         audioFilePath,

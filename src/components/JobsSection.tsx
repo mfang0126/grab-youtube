@@ -23,7 +23,7 @@ export default function JobsSection({
   return (
     <div className="max-w-4xl">
       <div className="flex justify-between">
-        <Heading>Download List</Heading>
+        <Heading>Download Progress List</Heading>
         {action}
       </div>
       <div className="flex flex-col gap-4">

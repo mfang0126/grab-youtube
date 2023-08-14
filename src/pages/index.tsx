@@ -63,7 +63,7 @@ const Home: NextPage = () => {
     mutate: mutateRunningJob,
     error: errorRunningJob,
   } = useSWR<JobItem | undefined, Error>(
-    [Status.downloading, Status.merging],
+    [Status.downloading, Status.merging, selectedFormat?.itag],
     async (status: Status[]) => {
       const jobs = await getJobsByStatus(status);
       return jobs.find(
@@ -135,7 +135,7 @@ const Home: NextPage = () => {
               clearInterval(retry);
             }
           })();
-        }, 5000);
+        }, 3000);
       }
     };
 

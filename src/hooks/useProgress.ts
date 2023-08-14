@@ -27,6 +27,9 @@ export default function useProgress(live: boolean, runningJob?: JobItem) {
       eventSource.current?.close();
     }
 
+    runningJob.progress && setProgress(runningJob.progress);
+    runningJob.status && setStatus(runningJob.status);
+
     eventSource.current = new EventSource(
       `/api/jobs/${runningJob._id}/progress`
     );
