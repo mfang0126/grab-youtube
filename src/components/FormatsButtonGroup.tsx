@@ -1,5 +1,6 @@
 import React, { type FC, type ChangeEvent } from "react";
 import type { videoFormat } from "ytdl-core";
+import formatBytes from "~/utils/formatBytes";
 
 export interface FormatsButtonGroupProps {
   options: videoFormat[];
@@ -20,16 +21,11 @@ const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({
   };
 
   return (
-    <div className="mb-6 grid w-full grid-cols-2 gap-4 md:grid-cols-3">
+    <div className="mb-6 grid w-full grid-cols-2 gap-4 md:grid-cols-2">
       {options.map((option) => (
         <div className="rounded-md bg-base-100 px-4" key={option.itag}>
           <label className="label cursor-pointer">
-            <span className="label-text">
-              {option.itag} - {option.qualityLabel || option.quality}
-            </span>
-            {option.hasAudio && option.hasVideo && (
-              <div className="badge badge-secondary">FAST</div>
-            )}
+            <LabelText option={option} />
             <input
               type="radio"
               name="formats"
@@ -41,6 +37,28 @@ const FormatsButtonGroup: FC<FormatsButtonGroupProps> = ({
           </label>
         </div>
       ))}
+    </div>
+  );
+};
+
+const LabelText = ({ option }: { option: videoFormat }) => {
+  const quality = option.qualityLabel || option.quality;
+  const size = option.contentLength && formatBytes(option.contentLength);
+
+  // TODO: It's only download and merge video and audio at the moment. split the video and audio download option out.
+  return (
+    <div className="flex gap-4">
+      {quality && <span className="badge badge-primary">{quality}</span>}
+      {size && <span className="badge badge-info">{size}</span>}
+      {option.hasAudio && option.hasVideo && (
+        <span className="badge badge-secondary">FAST</span>
+      )}
+      {!option.hasAudio && option.hasVideo && (
+        <span className="badge badge-error">VIDEO ONLY</span>
+      )}
+      {option.hasAudio && !option.hasVideo && (
+        <span className="badge badge-warning">AUDIO ONLY</span>
+      )}
     </div>
   );
 };

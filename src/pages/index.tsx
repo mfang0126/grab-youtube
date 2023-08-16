@@ -1,6 +1,8 @@
 "use client";
 
 import type { NextPage } from "next";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/router";
 import { useEffect, useMemo, useState, type ChangeEventHandler } from "react";
 import useSWR from "swr";
 import type { videoFormat } from "ytdl-core";
@@ -16,20 +18,16 @@ import UrlInput, { type UrlInputProps } from "~/components/UrlInput";
 import Wrapper from "~/components/Wrapper";
 import useProgress from "~/hooks/useProgress";
 import useToast from "~/hooks/useToast";
+import useVideo from "~/hooks/useVideo";
+
 import {
   getCronTriggered,
   getFiles,
   getJobsByStatus,
-  getVideo,
   addNewJob,
   startDownloadJob,
 } from "~/services/api-service";
-import {
-  Status,
-  type VideoItem,
-  type DownloadFile,
-  type JobItem,
-} from "~/typing";
+import { Status, type DownloadFile, type JobItem } from "~/typing";
 import { cleanJobId } from "~/utils/stringHelper";
 
 const Home: NextPage = () => {
@@ -41,11 +39,11 @@ const Home: NextPage = () => {
     null
   );
 
-  const {
-    error: errorVideo,
-    mutate: mutateVideo,
-    isValidating: isGrabbing,
-  } = useSWR<VideoItem, Error>(url, getVideo);
+  const session = useSession();
+  const isLoading = session.status === "loading";
+  const { isGrabbing, fetch: fetchVideo } = useVideo(url);
+  const router = useRouter();
+
   const {
     data: files,
     mutate: mutateFiles,
@@ -88,12 +86,16 @@ const Home: NextPage = () => {
   );
 
   const handleGrabClick: UrlInputProps["onGrabButtonClick"] = async () => {
-    const newVideos = await mutateVideo();
-    setOptions([]);
+    try {
+      const newVideos = await fetchVideo();
+      setOptions([]);
 
-    if (newVideos) {
-      setOptions(newVideos.formats);
-      setJobId(newVideos._id.toString());
+      if (newVideos) {
+        setOptions(newVideos.formats);
+        setJobId(newVideos._id.toString());
+      }
+    } catch (error) {
+      toast({ message: (error as Error).message });
     }
   };
 
@@ -214,9 +216,6 @@ const Home: NextPage = () => {
 
   // TODO: Move to custom hook.
   useEffect(() => {
-    if (errorVideo) {
-      toast({ message: "Error on fetching video formats." });
-    }
     if (errorFiles) {
       toast({ message: "Error on file list." });
     }
@@ -226,10 +225,37 @@ const Home: NextPage = () => {
     if (errorJobs) {
       toast({ message: "Error on fetching jobs list." });
     }
-  }, [toast, errorVideo, errorFiles, errorRunningJob, errorJobs]);
+  }, [toast, errorFiles, errorRunningJob, errorJobs]);
+
+  useEffect(() => {
+    if (!isLoading && session.status === "unauthenticated") {
+      void router.push("/login");
+    }
+  }, [isLoading, session.status]);
+
+  if (!session) {
+    return (
+      <Wrapper>
+        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
+          Access Denied
+        </h1>
+        <p>
+          <a href="/login">You must be signed in to view this page</a>
+        </p>
+      </Wrapper>
+    );
+  }
 
   return (
     <Wrapper>
+      <div className="absolute right-4 top-4">
+        <button
+          className="btn-ghost btn w-full"
+          onClick={(e) => void signOut()}
+        >
+          Logout
+        </button>
+      </div>
       <Title />
       <UrlInput
         value={url}

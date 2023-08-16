@@ -1,6 +1,10 @@
 import type { ObjectId } from "mongodb";
 import type { MoreVideoDetails, videoFormat } from "ytdl-core";
 
+export interface Message {
+  message: string;
+}
+
 export enum FormatType {
   audioOnly = "audioOnly",
   videoOnly = "videoOnly",

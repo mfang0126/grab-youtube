@@ -1,9 +1,3 @@
-import type {
-  NextComponentType,
-  NextPageContext,
-  NextLayoutComponentType,
-} from "next";
-import type { AppProps } from "next/app";
 import { type Db, type MongoClient } from "mongodb";
 
 declare global {
@@ -13,22 +7,6 @@ declare global {
       client: MongoClient;
     }
   }
-}
-
-declare module "next" {
-  type NextLayoutComponentType<P = object> = NextComponentType<
-    NextPageContext,
-    any,
-    P
-  > & {
-    getLayout?: (page: ReactNode) => ReactNode;
-  };
-}
-
-declare module "next/app" {
-  type AppLayoutProps<P = object> = AppProps & {
-    Component: NextLayoutComponentType;
-  };
 }
 
 declare namespace React {
